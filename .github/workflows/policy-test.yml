@@ -1,0 +1,20 @@
+# TODO: implement Kyverno policy test pipeline
+# Expected jobs:
+#   - kyverno-test: install kyverno CLI, run `kyverno test` against security/kyverno/
+name: Policy Test
+
+on:
+  push:
+    paths:
+      - 'security/kyverno/**'
+  pull_request:
+    paths:
+      - 'security/kyverno/**'
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: placeholder
+        run: echo "Kyverno policy tests not yet implemented — see Module 2"

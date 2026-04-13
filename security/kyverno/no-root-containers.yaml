@@ -1,0 +1,6 @@
+# Kyverno policy — placeholder
+# TODO: implement in Module 2
+#
+# Policy: Disallow containers running as root (uid 0)
+# Applies to: all namespaces except kube-system, kube-public, kube-node-lease
+# Action: Enforce (block non-compliant pods)

@@ -1,0 +1,6 @@
+# CiliumNetworkPolicy — placeholder
+# TODO: implement in Module 2
+#
+# Policy: Deny all cross-namespace traffic by default
+# Namespaces: prod, staging
+# Allow exceptions: monitoring namespace (Prometheus scraping), argus-system (agent)

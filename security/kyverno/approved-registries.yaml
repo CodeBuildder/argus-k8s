@@ -1,0 +1,7 @@
+# Kyverno policy — placeholder
+# TODO: implement in Module 2
+#
+# Policy: Only allow images from approved registries
+# Approved registries: docker.io, ghcr.io, registry.k8s.io, quay.io
+# Applies to: prod and staging namespaces
+# Action: Enforce (block images from unapproved registries)

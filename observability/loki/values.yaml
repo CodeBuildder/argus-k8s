@@ -1,0 +1,8 @@
+# Loki Helm values — placeholder
+# TODO: populate in Module 3
+#
+# Key settings to configure:
+#   loki.storage                — filesystem storage (single binary mode for dev cluster)
+#   loki.limits_config          — retention period, ingestion rate limits
+#   promtail.config.snippets    — pipeline stages for Falco JSON parsing
+#   promtail.config.scrapeConfigs — add Falco log path

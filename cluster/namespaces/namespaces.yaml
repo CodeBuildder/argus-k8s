@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod
+  labels:
+    environment: prod
+    app.kubernetes.io/managed-by: argus
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+  labels:
+    environment: staging
+    app.kubernetes.io/managed-by: argus
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    environment: monitoring
+    app.kubernetes.io/managed-by: argus
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argus-system
+  labels:
+    environment: system
+    app.kubernetes.io/managed-by: argus

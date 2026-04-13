@@ -1,0 +1,9 @@
+# Falco Helm values — placeholder
+# TODO: populate in Module 2
+#
+# Key settings to configure:
+#   driver.kind: ebpf           — use eBPF driver (ARM64 compatible, no kernel module)
+#   falco.json_output: true     — structured JSON events for agent consumption
+#   falco.http_output.enabled   — webhook output to argus agent
+#   falco.http_output.url       — http://argus-agent.argus-system.svc/falco/webhook
+#   customRules                 — mount security/falco/custom-rules.yaml

@@ -1,0 +1,20 @@
+# TODO: implement CI pipeline
+# Expected jobs:
+#   - lint: ruff check on agent/src/
+#   - test: pytest agent/tests/
+#   - kyverno-test: kyverno test security/kyverno/
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: placeholder
+        run: echo "CI not yet implemented — see Module 4"

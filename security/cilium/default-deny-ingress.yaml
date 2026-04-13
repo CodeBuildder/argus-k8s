@@ -1,0 +1,5 @@
+# CiliumNetworkPolicy — placeholder
+# TODO: implement in Module 2
+#
+# Policy: Default deny all ingress traffic to pods in prod and staging
+# Pods must explicitly declare allowed ingress via CiliumNetworkPolicy

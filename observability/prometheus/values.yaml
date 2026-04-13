@@ -1,0 +1,8 @@
+# Prometheus Helm values — placeholder
+# TODO: populate in Module 3
+#
+# Key settings to configure:
+#   prometheus.prometheusSpec.retention       — data retention period
+#   prometheus.prometheusSpec.storageSpec      — persistent volume claim
+#   alertmanager                               — alert routing to Slack/Discord
+#   additionalScrapeConfigs                    — Falco metrics, Cilium Hubble metrics

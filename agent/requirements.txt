@@ -1,0 +1,21 @@
+# Web framework
+fastapi
+uvicorn[standard]
+
+# Anthropic SDK — AI agent reasoning
+anthropic
+
+# Kubernetes client — context enrichment (kubectl wrapper)
+kubernetes
+
+# HTTP client — Loki and Hubble API queries
+httpx
+
+# Data validation
+pydantic
+
+# Async support
+asyncio
+
+# Logging
+structlog

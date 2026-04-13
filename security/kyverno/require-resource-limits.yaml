@@ -1,0 +1,6 @@
+# Kyverno policy — placeholder
+# TODO: implement in Module 2
+#
+# Policy: Require CPU and memory limits on all containers
+# Applies to: prod and staging namespaces
+# Action: Enforce (block pods without resource limits)
