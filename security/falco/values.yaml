@@ -1,9 +1,26 @@
-# Falco Helm values — placeholder
-# TODO: populate in Module 2
-#
-# Key settings to configure:
-#   driver.kind: ebpf           — use eBPF driver (ARM64 compatible, no kernel module)
-#   falco.json_output: true     — structured JSON events for agent consumption
-#   falco.http_output.enabled   — webhook output to argus agent
-#   falco.http_output.url       — http://argus-agent.argus-system.svc/falco/webhook
-#   customRules                 — mount security/falco/custom-rules.yaml
+# Falco Helm values for Argus
+# Install: helm upgrade --install falco falcosecurity/falco \
+#            --namespace kube-system --values security/falco/values.yaml
+
+driver:
+  kind: modern_ebpf
+
+falco:
+  json_output: true
+  log_stderr: true
+  priority: warning
+
+  http_output:
+    enabled: true
+    url: "http://argus-agent.argus-system.svc.cluster.local/falco/webhook"
+    user_agent: "falcosecurity/falco"
+
+  grpc:
+    enabled: false
+
+falcoctl:
+  artifact:
+    install:
+      enabled: true
+    follow:
+      enabled: true
