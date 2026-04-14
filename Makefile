@@ -64,9 +64,11 @@ deploy-kyverno:
 	helm repo add kyverno https://kyverno.github.io/kyverno
 	helm repo update
 	helm upgrade --install kyverno kyverno/kyverno \
-		--namespace kube-system \
+		--namespace kyverno \
 		--create-namespace
-	kubectl apply -f security/kyverno/
+	kubectl apply -f security/kyverno/no-root-containers.yaml
+	kubectl apply -f security/kyverno/require-resource-limits.yaml
+	kubectl apply -f security/kyverno/approved-registries.yaml
 
 deploy-observability:
 	@echo "TODO: implement in Module 3"
