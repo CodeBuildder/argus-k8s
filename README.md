@@ -18,6 +18,15 @@
 
 ![Hubble UI](docs/screenshots/hubble-ui.png)
 
+## Security status
+
+### Falco — Runtime threat detection
+- **Driver:** modern_ebpf (CO-RE, no kernel headers required)
+- **Status:** ✅ Running on all 3 nodes (DaemonSet)
+- **Output:** JSON via HTTP webhook → Argus agent
+- **Test:** `cat /etc/shadow` in container → detected in <1ms, tagged MITRE T1555
+- **Custom rules:** shell in prod, outbound connections, /etc writes, curl/wget, privilege escalation
+
 ## Stack
 
 | Layer | Tool | Why |
@@ -38,7 +47,7 @@
 | Module | Description | Status |
 |---|---|---|
 | 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | ✅ Complete |
-| 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ⏳ Pending |
+| 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | 🔨 In Progress |
 | 3 — Observability Stack | Prometheus, Grafana, Loki | ⏳ Pending |
 | 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ⏳ Pending |
 | 5 — Command & Control UI | React dashboard, approval queue, agent chat | ⏳ Pending |
