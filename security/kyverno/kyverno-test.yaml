@@ -1,0 +1,35 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: argus-kyverno-tests
+policies:
+  - no-root-containers.yaml
+  - require-resource-limits.yaml
+  - approved-registries.yaml
+resources:
+  - resources.yaml
+results:
+  - policy: disallow-root-containers
+    rule: check-runAsNonRoot
+    resource: compliant-pod
+    result: pass
+  - policy: disallow-root-containers
+    rule: check-runAsNonRoot
+    resource: root-pod
+    result: fail
+  - policy: require-resource-limits
+    rule: check-resource-limits
+    resource: compliant-pod
+    result: pass
+  - policy: require-resource-limits
+    rule: check-resource-limits
+    resource: no-limits-pod
+    result: fail
+  - policy: approved-registries-only
+    rule: check-registry
+    resource: compliant-pod
+    result: pass
+  - policy: approved-registries-only
+    rule: check-registry
+    resource: bad-registry-pod
+    result: fail

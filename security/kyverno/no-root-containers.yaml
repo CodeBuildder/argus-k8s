@@ -1,6 +1,28 @@
-# Kyverno policy — placeholder
-# TODO: implement in Module 2
-#
-# Policy: Disallow containers running as root (uid 0)
-# Applies to: all namespaces except kube-system, kube-public, kube-node-lease
-# Action: Enforce (block non-compliant pods)
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-root-containers
+  annotations:
+    policies.kyverno.io/title: Disallow Root Containers
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >
+      Containers running as root have elevated privileges that can be
+      exploited if compromised. All containers must run as non-root.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-runAsNonRoot
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Containers must not run as root. Set securityContext.runAsNonRoot=true."
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  runAsNonRoot: true

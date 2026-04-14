@@ -29,6 +29,15 @@
 
 **Why Falco for Argus:** Argus needs a low-level event stream it can reason over with an AI agent. Falco sits at the syscall layer — below the application, below the container runtime — so it catches things that application-level logging misses entirely: unexpected shell spawns, file reads on sensitive paths, outbound connections from workloads that should be silent. The structured JSON output feeds directly into the agent webhook, giving it a machine-readable event with MITRE ATT&CK tags already attached. No log scraping, no parsing — just a clean signal the agent can act on.
 
+### Kyverno — Admission control
+- **Status:** ✅ Running (v1.17.1)
+- **Namespace:** kyverno
+- **Mode:** Enforce (blocks non-compliant workloads at admission)
+- **Policies:**
+  - `disallow-root-containers` — rejects pods without runAsNonRoot=true
+  - `require-resource-limits` — rejects pods missing CPU/memory limits
+  - `approved-registries-only` — rejects images outside approved registries
+
 ## Stack
 
 | Layer | Tool | Why |

@@ -1,7 +1,35 @@
-# Kyverno policy — placeholder
-# TODO: implement in Module 2
-#
-# Policy: Only allow images from approved registries
-# Approved registries: docker.io, ghcr.io, registry.k8s.io, quay.io
-# Applies to: prod and staging namespaces
-# Action: Enforce (block images from unapproved registries)
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: approved-registries-only
+  annotations:
+    policies.kyverno.io/title: Approved Registries Only
+    policies.kyverno.io/category: Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >
+      Images must only be pulled from approved registries to prevent
+      supply chain attacks and use of untrusted or malicious images.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: check-registry
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - kube-public
+                - kube-node-lease
+                - kyverno
+      validate:
+        message: "Images must be from approved registries: docker.io/library, gcr.io, quay.io, ghcr.io, registry.k8s.io"
+        pattern:
+          spec:
+            containers:
+              - image: "docker.io/library/* | gcr.io/* | quay.io/* | ghcr.io/* | registry.k8s.io/*"
