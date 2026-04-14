@@ -1,0 +1,34 @@
+# Cilium Helm values for Argus
+# Applied via: cilium install --version 1.15.0
+# Reference: https://docs.cilium.io/en/v1.15/helm-reference/
+
+ipam:
+  mode: kubernetes
+
+kubeProxyReplacement: true
+
+k8sServiceHost: "192.168.139.42"
+k8sServicePort: 6443
+
+hubble:
+  relay:
+    enabled: true
+  ui:
+    enabled: true
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - http
+
+# eBPF settings
+bpf:
+  masquerade: true
+
+# Cluster identity
+cluster:
+  name: argus
