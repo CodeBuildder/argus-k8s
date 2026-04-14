@@ -1,15 +1,34 @@
-#!/usr/bin/env bash
-# Usage: ./02-install-master.sh
-#
-# Installs k3s on k3s-master with:
-#   --flannel-backend=none        (Cilium will handle CNI)
-#   --disable-network-policy      (Cilium will handle NetworkPolicy)
-#   --disable=traefik             (not needed for this project)
+#!/bin/bash
+# Argus - Install k3s on master node
+# Issue #2: https://github.com/CodeBuildder/argus-k8s/issues/2
 #
 # Prerequisites:
-#   - 01-provision-vms.sh has been run successfully
-#   - k3sup installed locally (brew install k3sup)
+#   - OrbStack VMs running (run 01-provision-vms.sh first)
+#   - k3sup installed (brew install k3sup)
 #
-# TODO: implement in Module 1
+# Usage: ./02-install-master.sh
 
-echo "TODO: implement master node k3s install in Module 1"
+set -euo pipefail
+
+MASTER_IP="192.168.139.42"
+USER="kaushikkumaran"
+SSH_KEY="$HOME/.orbstack/ssh/id_ed25519"
+
+echo "==> Installing k3s on master node ${MASTER_IP}..."
+
+k3sup install \
+  --host "${MASTER_IP}" \
+  --user "${USER}" \
+  --ssh-key "${SSH_KEY}" \
+  --k3s-extra-args "--disable traefik --disable servicelb --flannel-backend=none --disable-network-policy --cluster-cidr=10.244.0.0/16" \
+  --local-path ~/.kube/config \
+  --context argus
+
+echo "==> Switching to argus context..."
+kubectl config use-context argus
+
+echo "==> Master node status (NotReady is expected until Cilium is installed):"
+kubectl get nodes
+
+echo ""
+echo "==> Done. Next: run 03-join-workers.sh"
