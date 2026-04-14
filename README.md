@@ -38,6 +38,15 @@
   - `require-resource-limits` — rejects pods missing CPU/memory limits
   - `approved-registries-only` — rejects images outside approved registries
 
+### Cilium Network Policies — Zero-trust network segmentation
+- **Status:** ✅ Applied
+- **Model:** Default deny ingress, explicit allow
+- **Rules:**
+  - `prod` and `staging` namespaces: deny all ingress by default
+  - `monitoring` namespace: allowed to scrape metrics from prod/staging
+  - `argus-system` namespace: allowed to reach prod/staging for agent remediation
+  - Cross-namespace traffic: blocked and visible as dropped flows in Hubble UI
+
 ## Stack
 
 | Layer | Tool | Why |

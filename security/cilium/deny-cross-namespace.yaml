@@ -1,6 +1,44 @@
-# CiliumNetworkPolicy — placeholder
-# TODO: implement in Module 2
-#
-# Policy: Deny all cross-namespace traffic by default
-# Namespaces: prod, staging
-# Allow exceptions: monitoring namespace (Prometheus scraping), argus-system (agent)
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-argus-agent-egress
+  namespace: argus-system
+spec:
+  description: "Allow argus-system pods to reach prod and staging for remediation"
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": prod
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": staging
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+    - toFQDNs:
+        - matchPattern: "*.anthropic.com"
+    - toFQDNs:
+        - matchPattern: "api.anthropic.com"
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-monitoring-scrape
+  namespace: monitoring
+spec:
+  description: "Allow monitoring namespace to scrape metrics from prod and staging"
+  endpointSelector: {}
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": prod
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": staging
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
