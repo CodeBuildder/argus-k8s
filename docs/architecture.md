@@ -1,42 +1,19 @@
-# Argus Architecture
+# Argus — Architecture
 
-## Overview
+## Cluster Topology
 
-[Architecture diagram will be added after Module 1 is complete]
+| Node | Role | IP | OS |
+|---|---|---|---|
+| k3s-master | Control plane | 192.168.139.42 | Ubuntu 22.04 ARM64 |
+| k3s-worker1 | Worker | 192.168.139.77 | Ubuntu 22.04 ARM64 |
+| k3s-worker2 | Worker | 192.168.139.45 | Ubuntu 22.04 ARM64 |
 
-## Component interaction
+## Network
 
-```
-Falco (runtime events)
-    │
-    ▼ JSON webhook
-agent/src/webhook.py
-    │
-    ▼ raw alert
-agent/src/enricher.py  ──── kubectl (pod/deployment/namespace info)
-    │                  ──── Loki API (recent pod logs)
-    │                  ──── Hubble API (network flows)
-    │                  ──── Kyverno (active policy violations)
-    ▼ enriched context
-agent/src/reasoning.py ──── Claude API
-    │
-    ▼ structured decision
-agent/src/actions.py
-    │
-    ├── LOG       → audit.py → Loki
-    ├── NOTIFY    → Slack/Discord webhook
-    ├── ISOLATE   → CiliumNetworkPolicy apply
-    ├── KILL      → kubectl delete pod
-    └── HUMAN_REQUIRED → UI approval queue
-```
+All nodes communicate over OrbStack's internal virtual bridge.
+Node IPs are stable across Mac network changes (WiFi, ethernet, etc).
+SSH access requires ~/.orbstack/ssh/id_ed25519.
 
-## Network topology
+## Architecture diagram
 
-```
-OrbStack host (macOS M3)
-├── k3s-master  (192.168.64.x)  — control plane
-├── k3s-worker1 (192.168.64.x)  — workloads
-└── k3s-worker2 (192.168.64.x)  — workloads
-```
-
-[IP addresses will be filled in after Module 1]
+[Will be added after Module 1 is complete]
