@@ -1,15 +1,41 @@
-#!/usr/bin/env bash
-# Usage: ./01-provision-vms.sh
-#
-# Provisions 3 OrbStack Ubuntu 22.04 ARM64 VMs for the k3s cluster:
-#   k3s-master  — 2 vCPU, 2GB RAM
-#   k3s-worker1 — 2 vCPU, 3GB RAM
-#   k3s-worker2 — 2 vCPU, 3GB RAM
+#!/bin/bash
+# Argus - Provision OrbStack VMs for k3s cluster
+# Issue #1: https://github.com/CodeBuildder/argus-k8s/issues/1
 #
 # Prerequisites:
-#   - OrbStack installed and running (orbstack.dev)
-#   - orb CLI available in PATH
+#   - OrbStack installed and running (brew install orbstack)
+#   - ~/.orbstack/ssh/id_ed25519 exists
 #
-# TODO: implement in Module 1
+# Usage: ./01-provision-vms.sh
 
-echo "TODO: implement VM provisioning in Module 1"
+set -euo pipefail
+
+echo "==> Provisioning OrbStack VMs..."
+orb create ubuntu:22.04 k3s-master
+orb create ubuntu:22.04 k3s-worker1
+orb create ubuntu:22.04 k3s-worker2
+
+echo "==> Installing SSH daemon on all nodes..."
+for vm in k3s-master k3s-worker1 k3s-worker2; do
+  echo "  -> $vm"
+  ssh -i ~/.orbstack/ssh/id_ed25519 kaushikkumaran@${vm}.orb.local \
+    "sudo apt-get install -y openssh-server && sudo systemctl enable ssh && sudo systemctl start ssh"
+  ssh-copy-id -i ~/.orbstack/ssh/id_ed25519.pub kaushikkumaran@${vm}.orb.local
+done
+
+echo "==> Verifying SSH access via IP..."
+MASTER_IP="192.168.139.42"
+WORKER1_IP="192.168.139.77"
+WORKER2_IP="192.168.139.45"
+
+ssh -i ~/.orbstack/ssh/id_ed25519 kaushikkumaran@${MASTER_IP} "echo ok: master"
+ssh -i ~/.orbstack/ssh/id_ed25519 kaushikkumaran@${WORKER1_IP} "echo ok: worker1"
+ssh -i ~/.orbstack/ssh/id_ed25519 kaushikkumaran@${WORKER2_IP} "echo ok: worker2"
+
+echo ""
+echo "==> All VMs provisioned and SSH verified."
+echo "    Master:  ${MASTER_IP}"
+echo "    Worker1: ${WORKER1_IP}"
+echo "    Worker2: ${WORKER2_IP}"
+echo ""
+echo "    Next: run 02-install-master.sh"
