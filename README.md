@@ -27,6 +27,8 @@
 - **Test:** `cat /etc/shadow` in container → detected in <1ms, tagged MITRE T1555
 - **Custom rules:** shell in prod, outbound connections, /etc writes, curl/wget, privilege escalation
 
+**Why Falco for Argus:** Argus needs a low-level event stream it can reason over with an AI agent. Falco sits at the syscall layer — below the application, below the container runtime — so it catches things that application-level logging misses entirely: unexpected shell spawns, file reads on sensitive paths, outbound connections from workloads that should be silent. The structured JSON output feeds directly into the agent webhook, giving it a machine-readable event with MITRE ATT&CK tags already attached. No log scraping, no parsing — just a clean signal the agent can act on.
+
 ## Stack
 
 | Layer | Tool | Why |
