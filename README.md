@@ -49,7 +49,24 @@
 
 ## Local setup
 
-[fill in after Module 1 is complete]
+### Prerequisites
+- macOS (Apple Silicon M-series)
+- OrbStack installed (`brew install orbstack`)
+- CLI tools: `brew install kubectl helm k3sup cilium-cli hubble k9s`
+
+### Spin up the cluster
+```bash
+make cluster-up
+```
+
+This provisions 3 OrbStack VMs, installs k3s, deploys Cilium with eBPF
+kube-proxy replacement, enables Hubble, and creates all namespaces.
+
+### Verify
+```bash
+make cluster-status
+cilium hubble ui
+```
 
 ## Architecture decisions
 
