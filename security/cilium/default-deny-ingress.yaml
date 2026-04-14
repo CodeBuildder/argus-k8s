@@ -1,5 +1,37 @@
-# CiliumNetworkPolicy — placeholder
-# TODO: implement in Module 2
-#
-# Policy: Default deny all ingress traffic to pods in prod and staging
-# Pods must explicitly declare allowed ingress via CiliumNetworkPolicy
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: prod
+spec:
+  description: "Default deny all ingress to prod namespace pods"
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": prod
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": argus-system
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: staging
+spec:
+  description: "Default deny all ingress to staging namespace pods"
+  endpointSelector: {}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": staging
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": argus-system
