@@ -3,8 +3,20 @@
 > Autonomous Kubernetes security platform combining eBPF-native threat detection,
 > policy enforcement, and an AI reasoning agent for real-time threat response and remediation.
 
-## Architecture diagram placeholder
-[diagram will be added after Module 1 is complete]
+## Cluster status
+
+| Node | Role | IP | Status |
+|---|---|---|---|
+| k3s-master | Control plane | 192.168.139.42 | ✅ Ready |
+| k3s-worker1 | Worker | 192.168.139.77 | ✅ Ready |
+| k3s-worker2 | Worker | 192.168.139.45 | ✅ Ready |
+
+**Cilium:** v1.15.0 — eBPF mode, kube-proxy replacement enabled
+**Hubble:** Relay + UI enabled — live network flow observability active
+
+### Hubble UI — 3/3 nodes, 20.6 flows/s
+
+![Hubble UI](docs/screenshots/hubble-ui.png)
 
 ## Stack
 
@@ -25,7 +37,7 @@
 
 | Module | Description | Status |
 |---|---|---|
-| 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | 🔨 In Progress |
+| 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | ✅ Complete |
 | 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ⏳ Pending |
 | 3 — Observability Stack | Prometheus, Grafana, Loki | ⏳ Pending |
 | 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ⏳ Pending |
