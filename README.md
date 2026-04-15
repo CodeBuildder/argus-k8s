@@ -67,7 +67,7 @@
 | Module | Description | Status |
 |---|---|---|
 | 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | ✅ Complete |
-| 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | 🔨 In Progress |
+| 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ✅ Complete |
 | 3 — Observability Stack | Prometheus, Grafana, Loki | ⏳ Pending |
 | 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ⏳ Pending |
 | 5 — Command & Control UI | React dashboard, approval queue, agent chat | ⏳ Pending |
