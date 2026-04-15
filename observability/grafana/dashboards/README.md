@@ -1,13 +1,17 @@
-# Grafana Dashboards
+# Argus Grafana Dashboards
 
-Dashboard JSON files go here. Import via Grafana UI or provision via ConfigMap.
+## Default dashboards (from kube-prometheus-stack)
+- Kubernetes / Compute Resources / Cluster — cluster-wide CPU/memory
+- Kubernetes / Compute Resources / Namespace — per-namespace usage
+- Kubernetes / Networking / Cluster — network traffic
+- Node Exporter / Nodes — OS-level node metrics
+- Prometheus / Overview — Prometheus health
 
-## Planned dashboards
+## Custom dashboards (to be built in Module 3/4)
+- Argus / Security Events — Falco alert rate, severity, top rules
+- Argus / Network Policy — Cilium dropped flows, cross-namespace attempts
+- Argus / Agent Decisions — AI agent reasoning log, actions taken, approval queue
+- Argus / Cluster Health — combined cluster + security posture overview
 
-| Dashboard | Description | Status |
-|---|---|---|
-| Argus Security Overview | Falco alert feed, severity breakdown, top triggered rules | ⏳ Module 3 |
-| Network Flows (Hubble) | L3/L4/L7 flow visualization from Cilium Hubble | ⏳ Module 3 |
-| Cluster Health | Node CPU/memory, pod restarts, resource pressure | ⏳ Module 3 |
-| Agent Activity | Agent decisions, action distribution, suppression rate | ⏳ Module 4 |
-| Policy Violations | Kyverno admission denials over time | ⏳ Module 3 |
+Dashboard JSON files go in this directory.
+They are auto-loaded by Grafana via the sidecar configmap mechanism.

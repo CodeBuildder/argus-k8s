@@ -1,8 +1,32 @@
-# Prometheus Helm values — placeholder
-# TODO: populate in Module 3
-#
-# Key settings to configure:
-#   prometheus.prometheusSpec.retention       — data retention period
-#   prometheus.prometheusSpec.storageSpec      — persistent volume claim
-#   alertmanager                               — alert routing to Slack/Discord
-#   additionalScrapeConfigs                    — Falco metrics, Cilium Hubble metrics
+# kube-prometheus-stack Helm values for Argus
+# Install: helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#            --namespace monitoring --values observability/prometheus/values.yaml
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    scrapeInterval: 30s
+    evaluationInterval: 30s
+    additionalScrapeConfigs:
+      - job_name: 'falco'
+        static_configs:
+          - targets: ['falco-service.kube-system.svc.cluster.local:8765']
+        metrics_path: /metrics
+        scrape_interval: 15s
+
+grafana:
+  adminPassword: argus-admin
+  defaultDashboardsEnabled: true
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+
+alertmanager:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true
