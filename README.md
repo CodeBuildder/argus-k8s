@@ -5,6 +5,10 @@
 
 ## Cluster status
 
+### Network flow observability
+![Hubble UI — live eBPF network flows](docs/screenshots/hubble-ui-flows.png)
+*Live TCP flows between Cilium components captured at the kernel level via eBPF*
+
 | Node | Role | IP | Status |
 |---|---|---|---|
 | k3s-master | Control plane | 192.168.139.42 | ✅ Ready |
@@ -62,8 +66,8 @@
 
 ### Screenshots
 ![Prometheus targets — all scrape targets UP](docs/screenshots/prometheus-targets.png)
-![Grafana cluster overview dashboard](docs/screenshots/grafana-cluster-overview.png)
-![Hubble UI — live eBPF network flows](docs/screenshots/hubble-ui-flows.png)
+![Grafana dashboard library — 25 default K8s dashboards](docs/screenshots/grafana-dashboards.png)
+![Grafana cluster overview — CPU and memory across all nodes](docs/screenshots/grafana-cluster-overview.png)
 
 ## Stack
 
