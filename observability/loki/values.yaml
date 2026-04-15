@@ -1,8 +1,57 @@
-# Loki Helm values — placeholder
-# TODO: populate in Module 3
-#
-# Key settings to configure:
-#   loki.storage                — filesystem storage (single binary mode for dev cluster)
-#   loki.limits_config          — retention period, ingestion rate limits
-#   promtail.config.snippets    — pipeline stages for Falco JSON parsing
-#   promtail.config.scrapeConfigs — add Falco log path
+# Loki + Promtail Helm values for Argus
+# Install: helm upgrade --install loki grafana/loki-stack \
+#            --namespace monitoring --values observability/loki/values.yaml
+
+loki:
+  enabled: true
+  persistence:
+    enabled: false
+  config:
+    limits_config:
+      retention_period: 72h
+      ingestion_rate_mb: 4
+      ingestion_burst_size_mb: 6
+    chunk_store_config:
+      max_look_back_period: 72h
+    table_manager:
+      retention_deletes_enabled: true
+      retention_period: 72h
+
+promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+    scrape_configs:
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          - cri: {}
+          - match:
+              selector: '{app="falco"}'
+              stages:
+                - json:
+                    expressions:
+                      rule: rule
+                      priority: priority
+                      output: output
+                      hostname: hostname
+                - labels:
+                    rule:
+                    priority:
+                    hostname:
+                - output:
+                    source: output
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_node_name]
+            target_label: node
+
+grafana:
+  enabled: false
