@@ -47,6 +47,24 @@
   - `argus-system` namespace: allowed to reach prod/staging for agent remediation
   - Cross-namespace traffic: blocked and visible as dropped flows in Hubble UI
 
+## Observability status
+
+### Prometheus — Metrics collection
+- **Status:** ✅ Running (kube-prometheus-stack)
+- **Retention:** 7 days
+- **Targets:** alertmanager, apiserver, coredns, node-exporter (3 nodes), kube-state-metrics, kubelet
+
+### Grafana — Dashboards
+- **Status:** ✅ Running
+- **URL:** kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+- **Login:** admin / argus-admin
+- **Dashboards:** 25 default Kubernetes dashboards loaded
+
+### Screenshots
+![Prometheus targets — all scrape targets UP](docs/screenshots/prometheus-targets.png)
+![Grafana cluster overview dashboard](docs/screenshots/grafana-cluster-overview.png)
+![Hubble UI — live eBPF network flows](docs/screenshots/hubble-ui-flows.png)
+
 ## Stack
 
 | Layer | Tool | Why |
@@ -68,7 +86,7 @@
 |---|---|---|
 | 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | ✅ Complete |
 | 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ✅ Complete |
-| 3 — Observability Stack | Prometheus, Grafana, Loki | ⏳ Pending |
+| 3 — Observability Stack | Prometheus, Grafana, Loki | 🔨 In Progress |
 | 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ⏳ Pending |
 | 5 — Command & Control UI | React dashboard, approval queue, agent chat | ⏳ Pending |
 
