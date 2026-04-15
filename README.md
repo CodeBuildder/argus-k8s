@@ -64,10 +64,20 @@
 - **Login:** admin / argus-admin
 - **Dashboards:** 25 default Kubernetes dashboards loaded
 
+### Loki — Log aggregation
+- **Status:** ✅ Running (loki-stack)
+- **Retention:** 72 hours (disk-constrained on 20GiB VMs)
+- **Promtail:** DaemonSet collecting logs from all pods on all 3 nodes
+- **Falco pipeline:** JSON events parsed and labeled by rule, priority, hostname
+- **Query:** `{app="falco"}` returns structured Falco alerts in Grafana Explore
+- **Datasource:** http://loki.monitoring.svc.cluster.local:3100
+
 ### Screenshots
 ![Prometheus targets — all scrape targets UP](docs/screenshots/prometheus-targets.png)
 ![Grafana dashboard library — 25 default K8s dashboards](docs/screenshots/grafana-dashboards.png)
 ![Grafana cluster overview — CPU and memory across all nodes](docs/screenshots/grafana-cluster-overview.png)
+![Loki — Falco security events streaming in real time](docs/screenshots/loki-falco-logs.png)
+*Critical Falco detections (T1620 fileless execution) ingested and queryable via LogQL*
 
 ## Stack
 
@@ -90,7 +100,7 @@
 |---|---|---|
 | 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | ✅ Complete |
 | 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ✅ Complete |
-| 3 — Observability Stack | Prometheus, Grafana, Loki | 🔨 In Progress |
+| 3 — Observability Stack | Prometheus, Grafana, Loki | ✅ Complete |
 | 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ⏳ Pending |
 | 5 — Command & Control UI | React dashboard, approval queue, agent chat | ⏳ Pending |
 
