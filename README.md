@@ -1,3 +1,10 @@
+<!--
+Argus — Autonomous Kubernetes Security Platform
+Copyright (c) 2026 Kaushikkumaran
+Original work — see NOTICE for details
+Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
+-->
+
 # Argus
 
 > Autonomous Kubernetes security platform combining eBPF-native threat detection,
@@ -93,6 +100,13 @@
 | Dashboards | Grafana | Unified observability — metrics, logs, security events |
 | AI Agent | Python + Claude API | Enriches Falco alerts with cluster context, reasons about threat severity, routes remediation actions |
 | UI | React + Tailwind | Real-time incident feed, human approval queue, agent chat |
+
+## Author
+
+Built by [Kaushikkumaran](https://github.com/CodeBuildder) — April 2026
+
+Original architecture, AI agent design, and UI concept.
+All design decisions documented in [docs/decisions/](docs/decisions/).
 
 ## Modules
 
