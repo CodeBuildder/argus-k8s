@@ -1,5 +1,19 @@
 Argus — Autonomous Kubernetes Security Platform
-Copyright 2026 Kaushik Kumaran
+================================================
 
-This project was designed and built by Kaushik Kumaran.
-Any derivative works must retain this notice and provide attribution.
+Original design, architecture, and implementation by Kaushikkumaran
+GitHub: https://github.com/CodeBuildder/argus-k8s
+First committed: April 2026
+
+This project represents original work including:
+- Multi-layer Kubernetes security architecture (eBPF + admission + runtime)
+- AI agent design for autonomous threat reasoning and remediation
+- Attack chain correlation engine
+- Human-in-the-loop approval system with cryptographic audit trail
+- Cyber-themed real-time threat console UI design
+- Integration of Falco, Cilium, Kyverno, Prometheus, Loki, and Claude API
+
+All architectural decisions are documented in docs/decisions/.
+Commit history on GitHub serves as timestamped proof of authorship.
+
+This notice must be retained in all copies and derivative works.
