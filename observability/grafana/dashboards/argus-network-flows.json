@@ -1,0 +1,43 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": {"list": []},
+  "description": "Argus Network Flows — Cilium eBPF dropped flows, cross-namespace attempts",
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "${prometheusds}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "orange", "value": 10}, {"color": "red", "value": 50}]}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Dropped flows (5m)",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "${prometheusds}"}, "expr": "sum(rate(hubble_drop_total[5m]))", "legendFormat": "Drops/s"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${prometheusds}"},
+      "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+      "id": 2,
+      "options": {"legend": {"calcs": [], "displayMode": "list", "placement": "bottom"}, "tooltip": {"mode": "single"}},
+      "title": "Network flow rate by verdict",
+      "type": "timeseries",
+      "targets": [
+        {"datasource": {"type": "prometheus", "uid": "${prometheusds}"}, "expr": "sum(rate(hubble_flows_processed_total{verdict=\"FORWARDED\"}[5m]))", "legendFormat": "Forwarded"},
+        {"datasource": {"type": "prometheus", "uid": "${prometheusds}"}, "expr": "sum(rate(hubble_flows_processed_total{verdict=\"DROPPED\"}[5m]))", "legendFormat": "Dropped"}
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["argus", "cilium", "network"],
+  "templating": {"list": [{"current": {}, "hide": 0, "label": "Prometheus", "name": "prometheusds", "query": "prometheus", "refresh": 1, "type": "datasource"}]},
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "Argus / Network Flows",
+  "uid": "argus-network-flows",
+  "version": 1
+}

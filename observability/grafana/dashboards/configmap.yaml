@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argus-dashboards
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  argus-security-overview.json: |-
+    PLACEHOLDER_SECURITY
+  argus-cluster-health.json: |-
+    PLACEHOLDER_HEALTH
+  argus-policy-violations.json: |-
+    PLACEHOLDER_POLICY
+  argus-network-flows.json: |-
+    PLACEHOLDER_NETWORK

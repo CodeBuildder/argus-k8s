@@ -1,0 +1,30 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": {"list": []},
+  "description": "Argus Policy Violations — Kyverno denial rate, blocked workloads by namespace",
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "loki", "uid": "${lokids}"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": false, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": true},
+      "title": "Kyverno admission denials",
+      "type": "logs",
+      "targets": [{"datasource": {"type": "loki", "uid": "${lokids}"}, "expr": "{app=\"kyverno\"} |= \"blocked\"", "legendFormat": ""}]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["argus", "kyverno", "policy"],
+  "templating": {"list": [{"current": {}, "hide": 0, "label": "Loki", "name": "lokids", "query": "loki", "refresh": 1, "type": "datasource"}]},
+  "time": {"from": "now-6h", "to": "now"},
+  "title": "Argus / Policy Violations",
+  "uid": "argus-policy-violations",
+  "version": 1
+}
