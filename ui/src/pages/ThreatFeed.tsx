@@ -185,14 +185,37 @@ export default function ThreatFeed() {
               <Row label="Namespace" value={selected.namespace || 'unknown'} />
               <Row label="MITRE" value={selected.mitre_tags?.join(', ') || 'none'} />
             </DetailSection>
-            <DetailSection title="AI Assessment">
-              <div style={{ fontSize: '10px', color: '#8b949e', lineHeight: 1.5, fontFamily: 'sans-serif', padding: '6px 0' }}>
-                {selected.assessment}
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontSize: '8px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)' }}>AI Assessment</div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff9f', boxShadow: '0 0 6px #00ff9f', flexShrink: 0 }} />
+                <span style={{ fontSize: '8px', color: '#00ff9f', letterSpacing: '1px' }}>ARGUS AI · claude-sonnet-4-6</span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,159,0.1)' }} />
+                <span style={{ fontSize: '8px', color: '#4a5568' }}>{Math.round(selected.confidence * 100)}% confidence</span>
               </div>
-              <Row label="Confidence" value={`${Math.round(selected.confidence * 100)}%`} />
-              <Row label="False positive" value={selected.likely_false_positive ? 'Yes' : 'No'} color={selected.likely_false_positive ? '#00ff9f' : '#ff2d55'} />
-              <Row label="Blast radius" value={selected.blast_radius} />
-            </DetailSection>
+
+              <div style={{ background: 'rgba(0,255,159,0.03)', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '6px', padding: '10px 12px', marginBottom: '10px', position: 'relative' }}>
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #00ff9f, transparent)', borderRadius: '6px 0 0 6px' }} />
+                <p style={{ fontSize: '10px', color: '#c9d1d9', lineHeight: 1.6, fontFamily: 'sans-serif', margin: 0 }}>{selected.assessment}</p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+                <div style={{ background: selected.likely_false_positive ? 'rgba(0,255,159,0.06)' : 'rgba(255,45,85,0.06)', border: `1px solid ${selected.likely_false_positive ? 'rgba(0,255,159,0.2)' : 'rgba(255,45,85,0.2)'}`, borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '7px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>False positive</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: selected.likely_false_positive ? '#00ff9f' : '#ff2d55' }}>{selected.likely_false_positive ? 'Yes' : 'No'}</div>
+                </div>
+                <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.2)', borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '7px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Confidence</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#58a6ff' }}>{Math.round(selected.confidence * 100)}%</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255,159,10,0.04)', border: '1px solid rgba(255,159,10,0.15)', borderRadius: '6px', padding: '8px 10px' }}>
+                <div style={{ fontSize: '7px', color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Blast radius</div>
+                <p style={{ fontSize: '9px', color: '#8b949e', lineHeight: 1.5, fontFamily: 'sans-serif', margin: 0 }}>{selected.blast_radius}</p>
+              </div>
+            </div>
             <DetailSection title="Response">
               <Row label="Recommended" value={selected.recommended_action} />
               <Row label="Action taken" value={selected.action_taken} color={ACTION_CONFIG[selected.action_taken]?.color} />
