@@ -167,7 +167,7 @@ All design decisions documented in [docs/decisions/](docs/decisions/).
 | 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ✅ Complete |
 | 3 — Observability Stack | Prometheus, Grafana, Loki | ✅ Complete |
 | 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ✅ Complete |
-| 5 — Command & Control UI | React dashboard, approval queue, agent chat | ⏳ Pending |
+| 5 — Command & Control UI | React + Tailwind cyber console | In Progress |
 
 ## How it works
 

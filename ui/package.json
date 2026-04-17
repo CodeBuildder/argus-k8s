@@ -1,22 +1,26 @@
 {
   "name": "argus-console",
   "version": "0.1.0",
-  "description": "Argus Command & Control UI — cyber-themed Kubernetes security console",
+  "description": "Argus Command & Control UI",
   "author": "Kaushikkumaran",
   "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint src --ext ts,tsx"
   },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
     "recharts": "^2.10.0",
     "zustand": "^4.5.0",
     "@tanstack/react-query": "^5.0.0",
-    "lucide-react": "^0.383.0"
+    "lucide-react": "^0.383.0",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.3.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
