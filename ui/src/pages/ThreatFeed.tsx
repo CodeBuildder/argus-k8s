@@ -27,6 +27,9 @@ interface Incident {
   namespace: string
   hostname: string
   assessment: string
+  what_happened?: string[]
+  blast_radius_bullets?: string[]
+  action_steps?: string[]
   blast_radius: string
   recommended_action: string
   action_taken: string
@@ -196,40 +199,57 @@ export default function ThreatFeed() {
                 <span style={{ fontSize: '9px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(selected.confidence * 100)}% confidence</span>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ background: 'rgba(255,45,85,0.06)', border: '1px solid rgba(255,45,85,0.15)', borderRadius: '8px', padding: '10px 12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                    <span style={{ fontSize: '10px', color: '#ff2d55', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>01</span>
-                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff2d55', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>What happened</span>
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, margin: 0, fontFamily: 'Inter, sans-serif' }}>{selected.assessment}</p>
+              <div style={{ background: 'rgba(255,45,85,0.06)', border: '1px solid rgba(255,45,85,0.15)', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px' }}>🔍</span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff2d55', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>What happened</span>
                 </div>
+                {(selected.what_happened && selected.what_happened.length > 0 ? selected.what_happened : [selected.assessment]).map((bullet: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#ff2d55', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>▸</span>
+                    <span style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{bullet}</span>
+                  </div>
+                ))}
+              </div>
 
-                <div style={{ background: 'rgba(255,159,10,0.06)', border: '1px solid rgba(255,159,10,0.15)', borderRadius: '8px', padding: '10px 12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                    <span style={{ fontSize: '10px', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>02</span>
-                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Blast radius</span>
-                  </div>
-                  <p style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, margin: 0, fontFamily: 'Inter, sans-serif' }}>{selected.blast_radius}</p>
+              <div style={{ background: 'rgba(255,159,10,0.06)', border: '1px solid rgba(255,159,10,0.15)', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px' }}>💥</span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Blast radius</span>
                 </div>
+                {(selected.blast_radius_bullets && selected.blast_radius_bullets.length > 0 ? selected.blast_radius_bullets : [selected.blast_radius]).map((bullet: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
+                    <div style={{ flexShrink: 0, marginTop: '4px' }}>
+                      <div style={{ width: `${Math.max(30, 100 - i * 25)}%`, height: '4px', background: i === 0 ? '#ff2d55' : i === 1 ? '#ff9f0a' : '#ffd700', borderRadius: '2px', minWidth: '20px', maxWidth: '60px' }} />
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{bullet}</span>
+                  </div>
+                ))}
+              </div>
 
-                <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.15)', borderRadius: '8px', padding: '10px 12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
-                    <span style={{ fontSize: '10px', color: '#58a6ff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>03</span>
-                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Recommended action</span>
-                  </div>
-                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', margin: 0, fontFamily: 'Inter, sans-serif' }}>{selected.recommended_action}</p>
+              <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.15)', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px' }}>⚡</span>
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Recommended actions</span>
                 </div>
+                {(selected.action_steps && selected.action_steps.length > 0 ? selected.action_steps : [`Take action: ${selected.recommended_action}`]).map((step: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(88,166,255,0.15)', border: '1px solid rgba(88,166,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+                      <span style={{ fontSize: '9px', color: '#58a6ff', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{i + 1}</span>
+                    </div>
+                    <span style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{step}</span>
+                  </div>
+                ))}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                 <div style={{ background: selected.likely_false_positive ? 'rgba(0,255,159,0.06)' : 'rgba(255,45,85,0.06)', border: `1px solid ${selected.likely_false_positive ? 'rgba(0,255,159,0.2)' : 'rgba(255,45,85,0.2)'}`, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
                   <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>False positive</div>
-                  <div style={{ fontSize: '20px', fontWeight: 700, color: selected.likely_false_positive ? '#00ff9f' : '#ff2d55', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em' }}>{selected.likely_false_positive ? 'Yes' : 'No'}</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: selected.likely_false_positive ? '#00ff9f' : '#ff2d55', fontFamily: 'Inter, sans-serif' }}>{selected.likely_false_positive ? 'Yes' : 'No'}</div>
                 </div>
                 <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.2)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
                   <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Confidence</div>
-                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#58a6ff', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em' }}>{Math.round(selected.confidence * 100)}%</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#58a6ff', fontFamily: 'Inter, sans-serif' }}>{Math.round(selected.confidence * 100)}%</div>
                 </div>
               </div>
             </div>
