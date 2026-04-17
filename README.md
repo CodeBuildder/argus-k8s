@@ -84,9 +84,12 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 - **Argus / Cluster Health** — node CPU/memory, pod restarts
 - **Argus / Policy Violations** — Kyverno admission denials
 - **Argus / Network Flows** — Cilium eBPF dropped flows, flow rate by verdict
-- **Provisioning:** via ConfigMap with `grafana_dashboard=1` label — survives pod restarts
+- **Provisioning:** ConfigMap with grafana_dashboard=1 label — survives pod restarts
 
 ### Screenshots
+![Argus Grafana dashboards](docs/screenshots/grafana-argus-dashboards.png)
+![Security Overview — live Falco event stream](docs/screenshots/grafana-security-overview.png)
+![Cluster Health dashboard](docs/screenshots/grafana-cluster-health.png)
 ![Prometheus targets — all scrape targets UP](docs/screenshots/prometheus-targets.png)
 ![Grafana dashboard library — 25 default K8s dashboards](docs/screenshots/grafana-dashboards.png)
 ![Grafana cluster overview — CPU and memory across all nodes](docs/screenshots/grafana-cluster-overview.png)
