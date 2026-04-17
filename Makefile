@@ -74,7 +74,8 @@ deploy-observability:
 	@echo "TODO: implement in Module 3"
 
 deploy-agent:
-	@echo "TODO: implement in Module 4"
+	@echo "==> Deploying Argus agent..."
+	@cd agent && ANTHROPIC_API_KEY='${ANTHROPIC_API_KEY}' bash deploy.sh
 
 deploy-ui:
 	@echo "TODO: implement in Module 5"

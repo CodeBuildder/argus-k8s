@@ -69,6 +69,31 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 - Background task processing — 202 returned immediately, Falco never blocks
 - 18 unit tests covering validation, dedup, field mapping
 
+**Issue #14: Context enricher** ✅
+- Parallel queries to Kubernetes API, Loki, Hubble, and Kyverno with asyncio.gather
+- 5-second timeout with graceful degradation — partial results returned on failure
+- Pod metadata, recent logs, network flows, and policy violations collected per alert
+
+**Issue #15: Claude reasoning layer** ✅
+- Structured JSON decisions: severity, confidence, recommended action, blast radius
+- Model routing — claude-opus-4-6 for Critical/Error, claude-sonnet-4-6 for others
+- Prompt caching on system prompt reduces token cost by ~90% on repeat calls
+- Retry with exponential backoff on rate limit and connection errors
+
+**Issue #16: Action router** ✅
+- LOG, NOTIFY, ISOLATE, KILL, and HUMAN_REQUIRED actions
+- ISOLATE creates a CiliumNetworkPolicy deny-all for the offending pod
+- KILL requires confidence >= 0.85, falls back to ISOLATE below threshold
+- HUMAN_REQUIRED queues actions for manual approval via REST API
+- All decisions shipped to Loki as structured audit log entries
+
+**Issue #17: Containerize and deploy** ✅
+- Multi-stage Docker build, non-root user, minimal runtime image
+- Kubernetes manifests: Deployment, Service, RBAC, Secret template
+- deploy.sh builds image locally, loads into all 3 k3s nodes via SSH, applies manifests
+- Liveness and readiness probes on /health
+- `make deploy-agent` target wired up
+
 ## Observability status
 
 ### Prometheus — Metrics collection
@@ -136,7 +161,7 @@ All design decisions documented in [docs/decisions/](docs/decisions/).
 | 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | ✅ Complete |
 | 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ✅ Complete |
 | 3 — Observability Stack | Prometheus, Grafana, Loki | ✅ Complete |
-| 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | 🔨 In Progress |
+| 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ✅ Complete |
 | 5 — Command & Control UI | React dashboard, approval queue, agent chat | ⏳ Pending |
 
 ## How it works
