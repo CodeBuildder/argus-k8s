@@ -50,25 +50,66 @@ function LiveEventTicker({ incidents }: { incidents: Incident[] }) {
     CRITICAL: '#ff2d55', HIGH: '#ff9f0a', MED: '#ffd700', LOW: '#8b949e'
   }
 
+  const getActionDisplay = (action: string) => {
+    if (action === 'HUMAN_REQUIRED') {
+      return { icon: '👤', text: 'Attention Required', color: '#ff9f0a', clickable: true }
+    }
+    if (action === 'NOTIFY') {
+      return { icon: '💬', text: 'Slack Notified', color: '#00d4ff', clickable: false }
+    }
+    if (action === 'ISOLATE') {
+      return { icon: '🔒', text: 'Isolated', color: '#ff2d55', clickable: false }
+    }
+    if (action === 'KILL') {
+      return { icon: '⛔', text: 'Terminated', color: '#ff2d55', clickable: false }
+    }
+    return { icon: '✓', text: action, color: '#00ff9f', clickable: false }
+  }
+
   return (
     <div ref={ref} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {incidents.slice(0, 20).map((inc, i) => (
-        <div key={inc.id} style={{
-          display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px',
-          background: i === 0 ? 'rgba(0,255,159,0.04)' : 'transparent',
-          borderRadius: '5px', borderLeft: `2px solid ${sevColor[inc.severity] || '#4a5568'}`,
-          animation: i === 0 ? 'fadeInUp 0.3s ease-out' : 'none',
-          transition: 'all 0.2s',
-        }}>
-          <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', width: '24px', flexShrink: 0 }}>{fmt(inc.ts)}</span>
-          <span style={{ fontSize: '8px', fontWeight: 700, color: sevColor[inc.severity], fontFamily: 'JetBrains Mono, monospace', width: '16px', flexShrink: 0 }}>
-            {inc.severity === 'CRITICAL' ? '●' : inc.severity === 'HIGH' ? '◉' : '○'}
-          </span>
-          <span style={{ fontSize: '10px', color: '#d1d5db', fontFamily: 'Inter, sans-serif', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.rule}</span>
-          {inc.namespace && <span style={{ fontSize: '7px', color: '#58a6ff', background: 'rgba(88,166,255,0.1)', border: '1px solid rgba(88,166,255,0.2)', padding: '1px 4px', borderRadius: '3px', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.namespace}</span>}
-          <span style={{ fontSize: '8px', color: inc.action_taken === 'ISOLATE' ? '#ff2d55' : inc.action_taken === 'NOTIFY' ? '#ff9f0a' : '#4a5568', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.action_taken}</span>
-        </div>
-      ))}
+      {incidents.slice(0, 20).map((inc, i) => {
+        const actionDisplay = getActionDisplay(inc.action_taken)
+        return (
+          <div key={inc.id} style={{
+            display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px',
+            background: i === 0 ? 'rgba(0,255,159,0.04)' : 'rgba(0,0,0,0.2)',
+            borderRadius: '6px',
+            borderLeft: `3px solid ${sevColor[inc.severity] || '#4a5568'}`,
+            animation: i === 0 ? 'fadeInUp 0.3s ease-out' : 'none',
+            transition: 'all 0.2s',
+          }}>
+            <span style={{ fontSize: '9px', color: '#5a6478', fontFamily: 'JetBrains Mono, monospace', width: '28px', flexShrink: 0 }}>{fmt(inc.ts)}</span>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: sevColor[inc.severity], fontFamily: 'JetBrains Mono, monospace', width: '18px', flexShrink: 0 }}>
+              {inc.severity === 'CRITICAL' ? '●' : inc.severity === 'HIGH' ? '◉' : '○'}
+            </span>
+            <span style={{ fontSize: '11px', color: '#e6edf3', fontFamily: 'Inter, sans-serif', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{inc.rule}</span>
+            {inc.namespace && <span style={{ fontSize: '8px', color: '#58a6ff', background: 'rgba(88,166,255,0.15)', border: '1px solid rgba(88,166,255,0.3)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.namespace}</span>}
+            <div
+              onClick={() => actionDisplay.clickable && window.location.href = '/approvals'}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '9px',
+                color: actionDisplay.color,
+                background: `${actionDisplay.color}15`,
+                border: `1px solid ${actionDisplay.color}30`,
+                padding: '3px 8px',
+                borderRadius: '4px',
+                fontFamily: 'Inter, sans-serif',
+                flexShrink: 0,
+                cursor: actionDisplay.clickable ? 'pointer' : 'default',
+                transition: 'all 0.2s',
+                fontWeight: 600
+              }}
+            >
+              <span>{actionDisplay.icon}</span>
+              <span>{actionDisplay.text}</span>
+            </div>
+          </div>
+        )
+      })}
       {incidents.length === 0 && <div style={{ color: '#4a5568', fontSize: '10px', textAlign: 'center', padding: '20px' }}>No events yet</div>}
     </div>
   )
@@ -121,6 +162,8 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
     argus: { value1: 0, value2: 0, rate: 0 }
   })
 
+  const [activeThreatLayers, setActiveThreatLayers] = useState<number[]>([])
+
   useEffect(() => {
     const updateStats = () => {
       setLayerStats({
@@ -156,6 +199,30 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    // Randomly inject threats at individual layers
+    const injectThreat = () => {
+      const randomLayer = Math.floor(Math.random() * 4) // 0-3 (4 connections between 5 layers)
+      setActiveThreatLayers(prev => [...prev, randomLayer])
+      
+      // Remove the threat after animation completes
+      setTimeout(() => {
+        setActiveThreatLayers(prev => prev.filter((_, idx) => idx !== 0))
+      }, 2500)
+    }
+
+    // Inject a threat every 1-3 seconds randomly
+    const scheduleNext = () => {
+      const delay = Math.random() * 2000 + 1000 // 1-3 seconds
+      setTimeout(() => {
+        injectThreat()
+        scheduleNext()
+      }, delay)
+    }
+
+    scheduleNext()
+  }, [])
+
   const layers = [
     {
       name: 'Falco',
@@ -163,7 +230,7 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
       desc: 'Syscall monitoring',
       color: '#ff9f0a',
       active: true,
-      icon: '⚡',
+      icon: '🔍',
       stats: layerStats.falco,
       metric1: 'Events',
       metric2: 'Blocked'
@@ -174,7 +241,7 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
       desc: 'Network & process',
       color: '#58a6ff',
       active: true,
-      icon: '🔬',
+      icon: '⚡',
       stats: layerStats.ebpf,
       metric1: 'Flows',
       metric2: 'Dropped'
@@ -196,7 +263,7 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
       desc: 'L3-L7 filtering',
       color: '#00ff9f',
       active: true,
-      icon: '🔒',
+      icon: '🌐',
       stats: layerStats.cilium,
       metric1: 'Connections',
       metric2: 'Denied'
@@ -207,7 +274,7 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
       desc: 'Claude reasoning',
       color: '#00d4ff',
       active: true,
-      icon: '🤖',
+      icon: '🧠',
       stats: layerStats.argus,
       metric1: 'Decisions',
       metric2: 'Auto-fixed'
@@ -310,40 +377,73 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
               </div>
             </div>
             
-            {/* Connection arrow with animated threat signal */}
+            {/* Connection arrow with animated threat signals */}
             {i < layers.length - 1 && (
               <div style={{
-                width: '50px',
-                height: '3px',
-                background: `linear-gradient(90deg, ${layer.color}80, ${layers[i+1].color}80)`,
+                width: '60px',
+                height: '4px',
+                background: `linear-gradient(90deg, ${layer.color}60, ${layers[i+1].color}60)`,
                 flexShrink: 0,
                 position: 'relative',
-                margin: '0 -10px'
+                margin: '0 -10px',
+                borderRadius: '2px'
               }}>
-                {/* Animated threat particle */}
-                <div style={{
-                  position: 'absolute',
-                  top: '-4px',
-                  left: '0',
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '50%',
-                  background: threatColor,
-                  boxShadow: `0 0 10px ${threatColor}`,
-                  animation: 'travelDot 3s linear infinite',
-                  animationDelay: `${i * 0.6}s`
-                }} />
+                {/* Only show threat particles on active layers */}
+                {activeThreatLayers.includes(i) && (
+                  <>
+                    {/* Primary threat particle */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      left: '0',
+                      width: '16px',
+                      height: '16px',
+                      borderRadius: '50%',
+                      background: `radial-gradient(circle, ${threatColor}, ${threatColor}80)`,
+                      boxShadow: `0 0 15px ${threatColor}, 0 0 25px ${threatColor}80`,
+                      animation: 'travelDot 2.5s linear infinite',
+                      border: `2px solid ${threatColor}`,
+                      zIndex: 10
+                    }} />
+                    
+                    {/* Secondary threat particle (trailing) */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-3px',
+                      left: '0',
+                      width: '10px',
+                      height: '10px',
+                      borderRadius: '50%',
+                      background: threatColor,
+                      boxShadow: `0 0 8px ${threatColor}`,
+                      animation: 'travelDot 2.5s linear infinite',
+                      animationDelay: '0.3s',
+                      opacity: 0.6
+                    }} />
+                    
+                    {/* Pulse effect on connection */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '100%',
+                      background: `linear-gradient(90deg, transparent, ${threatColor}40, transparent)`,
+                      animation: 'pulse 2s ease-in-out infinite'
+                    }} />
+                  </>
+                )}
                 
                 {/* Arrow head */}
                 <div style={{
                   position: 'absolute',
-                  right: '-6px',
-                  top: '-3px',
+                  right: '-7px',
+                  top: '-4px',
                   width: 0,
                   height: 0,
-                  borderLeft: `6px solid ${layers[i+1].color}80`,
-                  borderTop: '4.5px solid transparent',
-                  borderBottom: '4.5px solid transparent'
+                  borderLeft: `8px solid ${layers[i+1].color}80`,
+                  borderTop: '6px solid transparent',
+                  borderBottom: '6px solid transparent'
                 }} />
               </div>
             )}
@@ -351,32 +451,44 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
         ))}
       </div>
       
-      {/* Flow description */}
+      {/* Flow description with legend */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '8px',
-        padding: '8px 16px',
+        gap: '16px',
+        padding: '12px 20px',
         background: 'rgba(0,212,255,0.05)',
         borderRadius: '8px',
         border: '1px solid rgba(0,212,255,0.15)'
       }}>
-        <div style={{
-          width: '6px',
-          height: '6px',
-          borderRadius: '50%',
-          background: threatColor,
-          boxShadow: `0 0 8px ${threatColor}`,
-          animation: 'glowpulse 1.5s infinite'
-        }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${threatColor}, ${threatColor}80)`,
+            boxShadow: `0 0 10px ${threatColor}`,
+            animation: 'glowpulse 1.5s infinite',
+            border: `2px solid ${threatColor}`
+          }} />
+          <span style={{
+            fontSize: '9px',
+            color: '#e6edf3',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontWeight: 600
+          }}>
+            = Threat Signal
+          </span>
+        </div>
+        <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
         <span style={{
           fontSize: '10px',
           color: '#8892a4',
           fontFamily: 'Inter, sans-serif',
           textAlign: 'center'
         }}>
-          Threat signals flow through each detection layer • Real-time analysis • Multi-stage validation
+          Watch threats flow through each layer • Real-time detection • Multi-stage validation
         </span>
       </div>
     </div>
