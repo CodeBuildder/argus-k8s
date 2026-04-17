@@ -58,6 +58,17 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
   - `argus-system` namespace: allowed to reach prod/staging for agent remediation
   - Cross-namespace traffic: blocked and visible as dropped flows in Hubble UI
 
+## Agent status
+
+### Module 4 — AI Agent Engine
+**Issue #13: Falco webhook receiver** ✅
+- FastAPI endpoint `POST /falco/webhook` receiving Falco JSON alerts
+- Pydantic validation — invalid payloads return 422
+- Priority normalization (Critical/Warning/Error/Notice)
+- Deduplication engine — same rule+pod+namespace suppressed for 5 minutes
+- Background task processing — 202 returned immediately, Falco never blocks
+- 18 unit tests covering validation, dedup, field mapping
+
 ## Observability status
 
 ### Prometheus — Metrics collection
@@ -125,7 +136,7 @@ All design decisions documented in [docs/decisions/](docs/decisions/).
 | 1 — Cluster Foundation | OrbStack VMs, k3s, Cilium, Hubble | ✅ Complete |
 | 2 — Security Layers | Falco, Kyverno, CiliumNetworkPolicy | ✅ Complete |
 | 3 — Observability Stack | Prometheus, Grafana, Loki | ✅ Complete |
-| 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | ⏳ Pending |
+| 4 — AI Agent Engine | Falco webhook → context enrichment → Claude → action router | 🔨 In Progress |
 | 5 — Command & Control UI | React dashboard, approval queue, agent chat | ⏳ Pending |
 
 ## How it works
