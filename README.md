@@ -94,6 +94,11 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 - Liveness and readiness probes on /health
 - `make deploy-agent` target wired up
 
+**Issue #17: Network policies configured**
+- argus-agent allowed egress to Anthropic API (world entity)
+- argus-agent allowed egress to monitoring/kube-system/prod/staging namespaces
+- Loki, Hubble, K8s API all reachable from agent pod
+
 ## Observability status
 
 ### Prometheus — Metrics collection

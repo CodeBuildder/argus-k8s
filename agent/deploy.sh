@@ -42,6 +42,7 @@ kubectl create secret generic argus-secrets \
 echo "==> Deploying agent..."
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/network-policy.yaml
 
 echo "==> Waiting for rollout..."
 kubectl rollout status deployment/argus-agent -n "${NAMESPACE}" --timeout=120s
