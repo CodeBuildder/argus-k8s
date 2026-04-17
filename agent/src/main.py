@@ -1,25 +1,63 @@
 """
-Argus AI Agent — entrypoint
+Argus Agent — FastAPI entrypoint
+Copyright (c) 2026 Kaushikkumaran
 
-Receives Falco webhook alerts, enriches with cluster context,
-reasons via Claude API, and routes remediation actions.
+Entry point for the Argus AI agent. Receives Falco webhook alerts,
+enriches with cluster context, reasons via Claude API, routes actions.
 """
 
-# TODO: implement in Module 4
-# Expected flow:
-#   POST /falco/webhook  → webhook.py → enricher.py → reasoning.py → actions.py → audit.py
+import logging
+import structlog
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
-from fastapi import FastAPI
+from webhook import router as webhook_router
 
-app = FastAPI(title="Argus Agent", version="0.1.0")
+logging.basicConfig(level=logging.INFO)
+log = structlog.get_logger()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    log.info("argus_agent_starting", version="0.1.0")
+    yield
+    log.info("argus_agent_stopping")
+
+
+app = FastAPI(
+    title="Argus Agent",
+    description="Autonomous Kubernetes security agent — threat detection, reasoning, remediation",
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(webhook_router)
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "module": "agent", "version": "0.1.0"}
+    return {"status": "ok", "service": "argus-agent", "version": "0.1.0"}
 
 
-@app.post("/falco/webhook")
-async def falco_webhook(payload: dict):
-    # TODO: implement in Module 4
-    return {"status": "received", "note": "agent not yet implemented"}
+@app.get("/metrics")
+async def metrics():
+    from webhook import dedup_cache
+    return {
+        "dedup_cache_size": len(dedup_cache),
+        "status": "ok",
+    }
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    log.error("unhandled_exception", path=request.url.path, error=str(exc))
+    return JSONResponse(status_code=500, content={"error": "internal server error"})
