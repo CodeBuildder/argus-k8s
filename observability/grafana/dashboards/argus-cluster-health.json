@@ -1,0 +1,50 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": {"list": []},
+  "description": "Argus Cluster Health — node CPU/memory, pod restarts, resource saturation",
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "${prometheusds}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "orange", "value": 70}, {"color": "red", "value": 90}]}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Cluster CPU usage",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "${prometheusds}"}, "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "CPU %"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${prometheusds}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "orange", "value": 70}, {"color": "red", "value": 85}]}, "unit": "percent"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Cluster memory usage",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "${prometheusds}"}, "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "legendFormat": "Memory %"}]
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${prometheusds}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Pod restarts (1h)",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "prometheus", "uid": "${prometheusds}"}, "expr": "sum(increase(kube_pod_container_status_restarts_total[1h]))", "legendFormat": "Restarts"}]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["argus", "cluster", "health"],
+  "templating": {"list": [{"current": {}, "hide": 0, "label": "Prometheus", "name": "prometheusds", "query": "prometheus", "refresh": 1, "type": "datasource"}]},
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "Argus / Cluster Health",
+  "uid": "argus-cluster-health",
+  "version": 1
+}

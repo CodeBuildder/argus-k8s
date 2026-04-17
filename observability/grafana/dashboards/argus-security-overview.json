@@ -1,0 +1,41 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": {"list": []},
+  "description": "Argus Security Overview — Falco alert feed, severity trends, top rules",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "loki", "uid": "${lokids}"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"}, "thresholds": {"steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}, {"color": "red", "value": 5}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "background", "graphMode": "none", "justifyMode": "center", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"]}},
+      "title": "Critical alerts (1h)",
+      "type": "stat",
+      "targets": [{"datasource": {"type": "loki", "uid": "${lokids"}, "expr": "count_over_time({app=\"falco\", priority=\"Critical\"}[1h])", "legendFormat": "critical"}]
+    },
+    {
+      "datasource": {"type": "loki", "uid": "${lokids}"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 4},
+      "id": 2,
+      "options": {"dedupStrategy": "none", "enableLogDetails": true, "prettifyLogMessage": true, "showLabels": true, "showTime": true, "sortOrder": "Descending", "wrapLogMessage": false},
+      "title": "Live Falco event stream",
+      "type": "logs",
+      "targets": [{"datasource": {"type": "loki", "uid": "${lokids}"}, "expr": "{app=\"falco\"}", "legendFormat": ""}]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 38,
+  "tags": ["argus", "security", "falco"],
+  "templating": {"list": [{"current": {}, "hide": 0, "includeAll": false, "label": "Loki", "name": "lokids", "options": [], "query": "loki", "refresh": 1, "type": "datasource"}]},
+  "time": {"from": "now-1h", "to": "now"},
+  "title": "Argus / Security Overview",
+  "uid": "argus-security-overview",
+  "version": 1
+}
