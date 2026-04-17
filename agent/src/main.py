@@ -88,6 +88,36 @@ async def reject_action(queue_id: str):
     raise HTTPException(status_code=404, detail="Queue entry not found")
 
 
+from actions import approval_queue
+import time
+
+# In-memory incident store (populated by audit logger)
+incident_store: list[dict] = []
+
+@app.get("/incidents")
+async def get_incidents(limit: int = 50, severity: str = None, namespace: str = None):
+    incidents = list(reversed(incident_store[-200:]))
+    if severity:
+        incidents = [i for i in incidents if i.get("severity", "").upper() == severity.upper()]
+    if namespace:
+        incidents = [i for i in incidents if i.get("namespace") == namespace]
+    return {"incidents": incidents[:limit], "total": len(incident_store)}
+
+@app.get("/incidents/stats")
+async def get_incident_stats():
+    now = time.time()
+    hour_ago = now - 3600
+    recent = [i for i in incident_store if i.get("ts", 0) > hour_ago]
+    return {
+        "total_1h": len(recent),
+        "critical_1h": len([i for i in recent if i.get("severity") == "CRITICAL"]),
+        "high_1h": len([i for i in recent if i.get("severity") == "HIGH"]),
+        "auto_remediated_1h": len([i for i in recent if i.get("action_taken") in ("ISOLATE", "KILL")]),
+        "false_positives_1h": len([i for i in recent if i.get("likely_false_positive")]),
+        "total_all_time": len(incident_store),
+    }
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     log.error("unhandled_exception", path=request.url.path, error=str(exc))

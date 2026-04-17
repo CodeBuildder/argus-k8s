@@ -107,6 +107,15 @@ async def audit_log(
     """
     entry = _build_audit_entry(alert, context, decision, action_result)
 
+    from main import incident_store
+    incident_store.append({
+        **entry,
+        "ts": time.time(),
+        "id": f"{int(time.time()*1000)}-{entry.get('pod', 'unknown')}",
+    })
+    if len(incident_store) > 500:
+        incident_store.pop(0)
+
     log.info(
         "argus_audit",
         **{k: v for k, v in entry.items() if k not in ("assessment", "blast_radius")}
