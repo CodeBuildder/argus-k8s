@@ -257,6 +257,7 @@ export default function ThreatFeed() {
   const [filter, setFilter] = useState<string>('ALL')
   const [nsFilter, setNsFilter] = useState<string>('ALL')
   const [loading, setLoading] = useState(true)
+  const [lastUpdated, setLastUpdated] = React.useState<string>('')
   const prevCount = useRef(0)
   const newIds = useRef<Set<string>>(new Set())
 
@@ -275,6 +276,7 @@ export default function ThreatFeed() {
       }
       prevCount.current = fresh.length
       setIncidents(fresh)
+      setLastUpdated(new Date().toTimeString().slice(0, 8))
       setLoading(false)
     } catch {
       setLoading(false)
@@ -326,6 +328,31 @@ export default function ThreatFeed() {
           }}>
             {namespaces.map(ns => <option key={ns} value={ns}>{ns}</option>)}
           </select>
+          <button
+            onClick={() => { fetchIncidents() }}
+            title="Refresh feed"
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(0,255,159,0.2)',
+              borderRadius: '6px',
+              color: '#00ff9f',
+              cursor: 'pointer',
+              padding: '3px 10px',
+              fontSize: '10px',
+              fontFamily: 'JetBrains Mono, monospace',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,255,159,0.08)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            ↻ Refresh
+          </button>
+          <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>
+            {lastUpdated ? `updated ${lastUpdated}` : ''}
+          </span>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>

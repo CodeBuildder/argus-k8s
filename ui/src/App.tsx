@@ -1,17 +1,19 @@
 import React from 'react'
 import { Routes, Route, NavLink } from 'react-router-dom'
-import { AlertTriangle, CheckSquare, MessageSquare, Activity, Map, Shield } from 'lucide-react'
+import { AlertTriangle, CheckSquare, MessageSquare, Activity, Map, Shield, GitBranch } from 'lucide-react'
 import ThreatFeed from './pages/ThreatFeed'
 import ApprovalQueue from './pages/ApprovalQueue'
 import AgentChat from './pages/AgentChat'
 import CommandCenter from './pages/CommandCenter'
 import ClusterMap from './pages/ClusterMap'
 import SecurityPosture from './pages/SecurityPosture'
+import AttackChains from './pages/AttackChains'
 
 const NAV_ITEMS = [
   { path: '/', icon: Activity, label: 'Command Center', exact: true },
   { path: '/threats', icon: AlertTriangle, label: 'Threat Feed' },
   { path: '/approvals', icon: CheckSquare, label: 'Approvals' },
+  { path: '/chains', icon: GitBranch, label: 'Attack Chains' },
   { path: '/cluster', icon: Map, label: 'Cluster Map' },
   { path: '/posture', icon: Shield, label: 'Security Posture' },
   { path: '/chat', icon: MessageSquare, label: 'Agent Chat' },
@@ -28,6 +30,7 @@ export default function App() {
             <Route path="/" element={<CommandCenter />} />
             <Route path="/threats" element={<ThreatFeed />} />
             <Route path="/approvals" element={<ApprovalQueue />} />
+            <Route path="/chains" element={<AttackChains />} />
             <Route path="/cluster" element={<ClusterMap />} />
             <Route path="/posture" element={<SecurityPosture />} />
             <Route path="/chat" element={<AgentChat />} />
