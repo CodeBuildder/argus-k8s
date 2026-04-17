@@ -51,7 +51,7 @@ function LiveEventTicker({ incidents }: { incidents: Incident[] }) {
   }
 
   return (
-    <div ref={ref} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+    <div ref={ref} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {incidents.slice(0, 20).map((inc, i) => (
         <div key={inc.id} style={{
           display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px',
