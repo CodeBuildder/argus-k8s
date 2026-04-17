@@ -114,32 +114,153 @@ function NodeHealthBar({ name, ip, status, podCount, cpuPct, memPct }: { name: s
 
 function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
   const layers = [
-    { name: 'Falco', sub: 'Runtime', color: '#ff9f0a', active: true },
-    { name: 'eBPF', sub: 'Kernel', color: '#58a6ff', active: true },
-    { name: 'Kyverno', sub: 'Admission', color: '#bc8cff', active: true },
-    { name: 'Cilium', sub: 'Network', color: '#00ff9f', active: true },
-    { name: 'Argus AI', sub: 'Analysis', color: '#00ff9f', active: true },
+    { name: 'Falco', sub: 'Runtime Detection', desc: 'Syscall monitoring', color: '#ff9f0a', active: true, icon: '⚡' },
+    { name: 'eBPF', sub: 'Kernel Hooks', desc: 'Network & process', color: '#58a6ff', active: true, icon: '🔬' },
+    { name: 'Kyverno', sub: 'Admission Control', desc: 'Policy enforcement', color: '#bc8cff', active: true, icon: '🛡️' },
+    { name: 'Cilium', sub: 'Network Policy', desc: 'L3-L7 filtering', color: '#00ff9f', active: true, icon: '🔒' },
+    { name: 'Argus AI', sub: 'Threat Analysis', desc: 'Claude reasoning', color: '#00d4ff', active: true, icon: '🤖' },
   ]
   const threatColor = recentSeverity === 'CRITICAL' ? '#ff2d55' : recentSeverity === 'HIGH' ? '#ff9f0a' : '#00ff9f'
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0', padding: '10px 0' }}>
-      {layers.map((layer, i) => (
-        <div key={layer.name} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: `${layer.color}12`, border: `1.5px solid ${layer.color}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px', position: 'relative' }}>
-              <span style={{ fontSize: '9px', fontWeight: 700, color: layer.color, fontFamily: 'JetBrains Mono, monospace' }}>{layer.name}</span>
-              <span style={{ fontSize: '7px', color: '#4a5568', fontFamily: 'Inter, sans-serif' }}>{layer.sub}</span>
-              <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '7px', height: '7px', borderRadius: '50%', background: layer.active ? layer.color : '#4a5568', boxShadow: layer.active ? `0 0 5px ${layer.color}` : 'none' }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px 0' }}>
+      {/* Main flow */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0', position: 'relative' }}>
+        {layers.map((layer, i) => (
+          <div key={layer.name} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              {/* Layer card */}
+              <div style={{
+                width: '100%',
+                maxWidth: '140px',
+                minHeight: '110px',
+                borderRadius: '12px',
+                background: `linear-gradient(135deg, ${layer.color}08, ${layer.color}18)`,
+                border: `2px solid ${layer.color}50`,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                position: 'relative',
+                padding: '12px',
+                boxShadow: `0 4px 12px ${layer.color}20`,
+                transition: 'all 0.3s ease'
+              }}>
+                {/* Status indicator */}
+                <div style={{
+                  position: 'absolute',
+                  top: '8px',
+                  right: '8px',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  background: layer.active ? layer.color : '#4a5568',
+                  boxShadow: layer.active ? `0 0 8px ${layer.color}` : 'none',
+                  animation: layer.active ? 'glowpulse 2s infinite' : 'none'
+                }} />
+                
+                {/* Icon */}
+                <div style={{ fontSize: '24px', marginBottom: '4px' }}>{layer.icon}</div>
+                
+                {/* Layer name */}
+                <span style={{
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: layer.color,
+                  fontFamily: 'JetBrains Mono, monospace',
+                  textAlign: 'center'
+                }}>{layer.name}</span>
+                
+                {/* Subtitle */}
+                <span style={{
+                  fontSize: '9px',
+                  color: '#8892a4',
+                  fontFamily: 'Inter, sans-serif',
+                  textAlign: 'center',
+                  fontWeight: 600
+                }}>{layer.sub}</span>
+                
+                {/* Description */}
+                <span style={{
+                  fontSize: '8px',
+                  color: '#5a6478',
+                  fontFamily: 'Inter, sans-serif',
+                  textAlign: 'center',
+                  marginTop: '2px'
+                }}>{layer.desc}</span>
+              </div>
             </div>
+            
+            {/* Connection arrow with animated threat signal */}
+            {i < layers.length - 1 && (
+              <div style={{
+                width: '50px',
+                height: '3px',
+                background: `linear-gradient(90deg, ${layer.color}80, ${layers[i+1].color}80)`,
+                flexShrink: 0,
+                position: 'relative',
+                margin: '0 -10px'
+              }}>
+                {/* Animated threat particle */}
+                <div style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  left: '0',
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  background: threatColor,
+                  boxShadow: `0 0 10px ${threatColor}`,
+                  animation: 'travelDot 3s linear infinite',
+                  animationDelay: `${i * 0.6}s`
+                }} />
+                
+                {/* Arrow head */}
+                <div style={{
+                  position: 'absolute',
+                  right: '-6px',
+                  top: '-3px',
+                  width: 0,
+                  height: 0,
+                  borderLeft: `6px solid ${layers[i+1].color}80`,
+                  borderTop: '4.5px solid transparent',
+                  borderBottom: '4.5px solid transparent'
+                }} />
+              </div>
+            )}
           </div>
-          {i < layers.length - 1 && (
-            <div style={{ width: '20px', height: '2px', background: `linear-gradient(90deg, ${layer.color}60, ${layers[i+1].color}60)`, flexShrink: 0, position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '-2px', left: '50%', transform: 'translateX(-50%)', width: '5px', height: '5px', borderRadius: '50%', background: threatColor, animation: 'travelDot 2s linear infinite', animationDelay: `${i * 0.4}s` }} />
-            </div>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
+      
+      {/* Flow description */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '8px 16px',
+        background: 'rgba(0,212,255,0.05)',
+        borderRadius: '8px',
+        border: '1px solid rgba(0,212,255,0.15)'
+      }}>
+        <div style={{
+          width: '6px',
+          height: '6px',
+          borderRadius: '50%',
+          background: threatColor,
+          boxShadow: `0 0 8px ${threatColor}`,
+          animation: 'glowpulse 1.5s infinite'
+        }} />
+        <span style={{
+          fontSize: '10px',
+          color: '#8892a4',
+          fontFamily: 'Inter, sans-serif',
+          textAlign: 'center'
+        }}>
+          Threat signals flow through each detection layer • Real-time analysis • Multi-stage validation
+        </span>
+      </div>
     </div>
   )
 }
