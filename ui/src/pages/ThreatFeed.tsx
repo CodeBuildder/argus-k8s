@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 
 const API = '/api'
 
@@ -39,6 +39,124 @@ interface Incident {
   mitre_tags: string[]
   enrichment_sources: string[]
   enrichment_duration_ms: number
+}
+
+const NODES = [
+  { name: 'k3s-master', ip: '192.168.139.42' },
+  { name: 'k3s-worker1', ip: '192.168.139.77' },
+  { name: 'k3s-worker2', ip: '192.168.139.45' },
+]
+
+function ImpactDiagram({ incident }: { incident: any }) {
+  const [scanPos, setScanPos] = React.useState(0)
+  const [barsAnimated, setBarsAnimated] = React.useState(false)
+
+  React.useEffect(() => {
+    const t = setInterval(() => setScanPos(p => (p + 1) % 100), 30)
+    return () => clearInterval(t)
+  }, [])
+
+  React.useEffect(() => {
+    setBarsAnimated(false)
+    const t = setTimeout(() => setBarsAnimated(true), 200)
+    return () => clearTimeout(t)
+  }, [incident.id])
+
+  const threatNode = incident.hostname || 'k3s-worker1'
+  const threatPod = incident.pod
+  const threatNs = incident.namespace
+
+  const riskBars = [
+    { label: 'Data exposure', width: incident.severity === 'CRITICAL' ? 82 : incident.severity === 'HIGH' ? 60 : 35, color: '#ff2d55' },
+    { label: 'Lateral movement', width: incident.severity === 'CRITICAL' ? 54 : incident.severity === 'HIGH' ? 40 : 20, color: '#ff9f0a' },
+    { label: 'Service disruption', width: incident.severity === 'CRITICAL' ? 48 : incident.severity === 'HIGH' ? 35 : 15, color: '#ff9f0a' },
+    { label: 'Node compromise', width: incident.severity === 'CRITICAL' ? 22 : 10, color: '#ffd700' },
+    { label: 'Cluster takeover', width: incident.severity === 'CRITICAL' ? 12 : 5, color: '#4a5568' },
+  ]
+
+  const getNodeStatus = (nodeName: string) => {
+    if (nodeName === threatNode) return 'threat'
+    if (incident.severity === 'CRITICAL') return 'risk'
+    return 'safe'
+  }
+
+  const nodeColors = { threat: '#ff2d55', risk: '#ff9f0a', safe: '#00ff9f' }
+  const nodeBgs = { threat: 'rgba(255,45,85,0.12)', risk: 'rgba(255,159,10,0.08)', safe: 'rgba(0,255,159,0.05)' }
+  const nodeBorders = { threat: 'rgba(255,45,85,0.4)', risk: 'rgba(255,159,10,0.3)', safe: 'rgba(0,255,159,0.2)' }
+  const nodeLabels = { threat: 'THREAT', risk: 'AT RISK', safe: 'CLEAN' }
+
+  return (
+    <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.1)', borderRadius: '10px', padding: '12px', marginBottom: '10px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, height: '1px', background: 'linear-gradient(90deg,transparent,rgba(0,255,159,0.4),transparent)', top: `${scanPos}%`, transition: 'top 0.03s linear', pointerEvents: 'none' }} />
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid rgba(0,255,159,0.06)' }}>
+        <span style={{ fontSize: '8px', background: 'rgba(0,255,159,0.08)', border: '1px solid rgba(0,255,159,0.2)', color: '#00ff9f', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>argus-k8s</span>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: '#f0f6fc' }}>Production cluster</span>
+        <span style={{ fontSize: '8px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>3 nodes · 4 namespaces</span>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
+        {NODES.map(node => {
+          const status = getNodeStatus(node.name) as 'threat' | 'risk' | 'safe'
+          const isThreat = status === 'threat'
+          return (
+            <div key={node.name} style={{ background: nodeBgs[status], border: `1px solid ${nodeBorders[status]}`, borderRadius: '7px', padding: '8px 10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: nodeColors[status], boxShadow: isThreat ? `0 0 6px ${nodeColors[status]}` : 'none', flexShrink: 0, animation: isThreat ? 'pulse 1.5s infinite' : 'none' }} />
+                <span style={{ fontSize: '10px', fontWeight: 700, color: '#e6edf3', fontFamily: 'JetBrains Mono, monospace' }}>{node.name}</span>
+                <span style={{ fontSize: '8px', color: nodeColors[status], fontFamily: 'JetBrains Mono, monospace', marginLeft: '2px' }}>{nodeLabels[status]}</span>
+                <span style={{ fontSize: '8px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{node.ip}</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {isThreat && threatPod && (
+                  <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,45,85,0.15)', border: '1px solid rgba(255,45,85,0.4)', color: '#ff2d55', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ff2d55', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+                    {threatPod}
+                    {threatNs && <span style={{ fontSize: '7px', padding: '0 3px', background: 'rgba(88,166,255,0.15)', borderRadius: '2px', color: '#58a6ff' }}>{threatNs}</span>}
+                  </span>
+                )}
+                {isThreat && (
+                  <>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(75,85,99,0.2)', border: '1px solid rgba(75,85,99,0.3)', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>isolated api-gateway</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>backend-svc</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>falco-agent</span>
+                  </>
+                )}
+                {status === 'risk' && (
+                  <>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>postgres-0</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>auth-service</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>prometheus</span>
+                  </>
+                )}
+                {status === 'safe' && (
+                  <>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>argus-agent</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>kyverno</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>cilium</span>
+                  </>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ borderTop: '1px solid rgba(0,255,159,0.05)', paddingTop: '8px' }}>
+        {riskBars.map(({ label, width, color }) => (
+          <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <span style={{ fontSize: '8px', color: '#6b7280', width: '110px', flexShrink: 0, fontFamily: 'JetBrains Mono, monospace' }}>{label}</span>
+            <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.04)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ height: '100%', borderRadius: '2px', background: color, width: barsAnimated ? `${width}%` : '0%', transition: 'width 1.2s ease-out' }} />
+            </div>
+            <span style={{ fontSize: '8px', fontWeight: 700, color, width: '28px', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{width}%</span>
+          </div>
+        ))}
+      </div>
+
+      <style>{`@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,45,85,0.5)}50%{box-shadow:0 0 0 4px rgba(255,45,85,0)}}`}</style>
+    </div>
+  )
 }
 
 export default function ThreatFeed() {
@@ -192,52 +310,35 @@ export default function ThreatFeed() {
             <div style={{ marginBottom: '14px' }}>
               <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace' }}>AI Assessment</div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff9f', boxShadow: '0 0 6px #00ff9f', flexShrink: 0 }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff9f', boxShadow: '0 0 6px #00ff9f', flexShrink: 0, animation: 'glowpulse 2s infinite' }} />
                 <span style={{ fontSize: '9px', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>ARGUS AI · claude-sonnet-4-6</span>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,159,0.1)' }} />
                 <span style={{ fontSize: '9px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(selected.confidence * 100)}% confidence</span>
               </div>
 
-              <div style={{ background: 'rgba(255,45,85,0.06)', border: '1px solid rgba(255,45,85,0.15)', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px' }}>🔍</span>
+              <div style={{ background: 'rgba(255,45,85,0.05)', border: '1px solid rgba(255,45,85,0.12)', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff2d55', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>What happened</span>
                 </div>
-                {(selected.what_happened && selected.what_happened.length > 0 ? selected.what_happened : [selected.assessment]).map((bullet: string, i: number) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px', alignItems: 'flex-start' }}>
+                {((selected as any).what_happened?.length > 0 ? (selected as any).what_happened : [selected.assessment]).map((bullet: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '5px', alignItems: 'flex-start' }}>
                     <span style={{ color: '#ff2d55', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>▸</span>
-                    <span style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{bullet}</span>
+                    <span style={{ fontSize: '11px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{bullet}</span>
                   </div>
                 ))}
               </div>
 
-              <div style={{ background: 'rgba(255,159,10,0.06)', border: '1px solid rgba(255,159,10,0.15)', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px' }}>💥</span>
-                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Blast radius</span>
-                </div>
-                {(selected.blast_radius_bullets && selected.blast_radius_bullets.length > 0 ? selected.blast_radius_bullets : [selected.blast_radius]).map((bullet: string, i: number) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
-                    <div style={{ flexShrink: 0, marginTop: '4px' }}>
-                      <div style={{ width: `${Math.max(30, 100 - i * 25)}%`, height: '4px', background: i === 0 ? '#ff2d55' : i === 1 ? '#ff9f0a' : '#ffd700', borderRadius: '2px', minWidth: '20px', maxWidth: '60px' }} />
-                    </div>
-                    <span style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{bullet}</span>
-                  </div>
-                ))}
-              </div>
+              <ImpactDiagram incident={selected} />
 
-              <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.15)', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px' }}>⚡</span>
+              <div style={{ background: 'rgba(88,166,255,0.04)', border: '1px solid rgba(88,166,255,0.12)', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Recommended actions</span>
                 </div>
-                {(selected.action_steps && selected.action_steps.length > 0 ? selected.action_steps : [`Take action: ${selected.recommended_action}`]).map((step: string, i: number) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'flex-start' }}>
-                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(88,166,255,0.15)', border: '1px solid rgba(88,166,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
-                      <span style={{ fontSize: '9px', color: '#58a6ff', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{i + 1}</span>
-                    </div>
-                    <span style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{step}</span>
+                {((selected as any).action_steps?.length > 0 ? (selected as any).action_steps : [`Take action: ${selected.recommended_action}`]).map((step: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '7px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(88,166,255,0.12)', border: '1px solid rgba(88,166,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#58a6ff', fontWeight: 700, flexShrink: 0, marginTop: '1px', fontFamily: 'JetBrains Mono, monospace' }}>{i + 1}</div>
+                    <span style={{ fontSize: '11px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{step}</span>
                   </div>
                 ))}
               </div>
@@ -252,6 +353,7 @@ export default function ThreatFeed() {
                   <div style={{ fontSize: '20px', fontWeight: 700, color: '#58a6ff', fontFamily: 'Inter, sans-serif' }}>{Math.round(selected.confidence * 100)}%</div>
                 </div>
               </div>
+              <style>{`@keyframes glowpulse{0%,100%{box-shadow:0 0 4px #00ff9f}50%{box-shadow:0 0 10px #00ff9f,0 0 20px rgba(0,255,159,0.3)}}`}</style>
             </div>
             <DetailSection title="Response">
               <Row label="Recommended" value={selected.recommended_action} />

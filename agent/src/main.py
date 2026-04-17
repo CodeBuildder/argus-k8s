@@ -117,6 +117,22 @@ async def get_incident_stats():
         "total_all_time": len(incident_store),
     }
 
+@app.get("/attack-chains")
+async def get_attack_chains():
+    from attack_chain import attack_chains
+    return {
+        "chains": list(reversed(attack_chains[-20:])),
+        "total": len(attack_chains),
+    }
+
+@app.get("/attack-chains/{chain_id}")
+async def get_attack_chain(chain_id: str):
+    from attack_chain import attack_chains
+    chain = next((c for c in attack_chains if c["id"] == chain_id), None)
+    if not chain:
+        raise HTTPException(status_code=404, detail="Chain not found")
+    return chain
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):

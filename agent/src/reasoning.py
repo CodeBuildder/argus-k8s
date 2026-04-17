@@ -150,6 +150,7 @@ def _build_user_prompt(context: dict) -> str:
     logs = context.get("logs")
     flows = context.get("flows")
     violations = context.get("violations")
+    vulnerabilities = context.get("vulnerabilities")
 
     sections = []
 
@@ -220,6 +221,18 @@ Pod phase: {pod.get("pod_phase", "unknown")}""")
         sections.append("## Active Policy Violations\nNone.")
     else:
         sections.append("## Active Policy Violations\nUnavailable.")
+
+    # Image vulnerability context
+    if vulnerabilities:
+        sections.append(f"""## Image Vulnerabilities
+Critical CVEs: {vulnerabilities.get("critical_count", 0)}
+High CVEs: {vulnerabilities.get("high_count", 0)}
+Image risk score: {vulnerabilities.get("risk_score", 0)}/100
+Top CVEs: {json.dumps(vulnerabilities.get("top_cves", []))}""")
+    elif vulnerabilities == {}:
+        sections.append("## Image Vulnerabilities\nNone reported.")
+    else:
+        sections.append("## Image Vulnerabilities\nUnavailable.")
 
     return "\n\n".join(sections)
 

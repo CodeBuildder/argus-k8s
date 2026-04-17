@@ -119,6 +119,19 @@ async def audit_log(
     if len(incident_store) > 500:
         incident_store.pop(0)
 
+    try:
+        from attack_chain import correlate_alert
+        chain = correlate_alert(entry)
+        if chain:
+            log.info(
+                "attack_chain_updated",
+                chain_id=chain["id"],
+                stages=chain["stages_detected"],
+                confidence=chain["confidence"],
+            )
+    except Exception as e:
+        log.warning("attack_chain_error", error=str(e))
+
     log.info(
         "argus_audit",
         **{k: v for k, v in entry.items() if k not in ("assessment", "blast_radius")}
