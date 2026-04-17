@@ -90,7 +90,7 @@ export default function ThreatFeed() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 440px' : '1fr', height: '100%', overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <span style={{ fontSize: '9px', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '2px' }}>
@@ -135,7 +135,7 @@ export default function ThreatFeed() {
                 style={{
                   borderRadius: '6px', border: `1px solid ${selected?.id === inc.id ? 'rgba(0,255,159,0.3)' : sev.border}`,
                   background: selected?.id === inc.id ? '#1c2433' : inc.severity === 'CRITICAL' ? 'rgba(255,45,85,0.05)' : '#1a2233',
-                  padding: '11px 14px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  padding: '13px 15px', minHeight: '80px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
                   transition: 'all 0.12s',
                   animation: isNew ? 'slideIn 0.3s ease-out' : undefined,
                 }}
@@ -143,21 +143,21 @@ export default function ThreatFeed() {
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: sev.dot, borderRadius: '3px 0 0 3px' }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '9px', fontWeight: 700, padding: '3px 7px', borderRadius: '3px', background: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '3px', background: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       ● {inc.severity}
                     </span>
-                    <span style={{ fontSize: '9px', color: `${act.color}`, background: `${act.color}22`, padding: '2px 7px', borderRadius: '3px', border: `1px solid ${act.color}44` }}>
+                    <span style={{ fontSize: '10px', color: `${act.color}`, background: `${act.color}22`, padding: '2px 8px', borderRadius: '3px', border: `1px solid ${act.color}44` }}>
                       {act.label}
                     </span>
                   </div>
-                  <span style={{ fontSize: '9px', color: '#6b7280' }}>{fmt(inc.ts)} · {inc.hostname}</span>
+                  <span style={{ fontSize: '10px', color: '#6b7280' }}>{fmt(inc.ts)} · {inc.hostname}</span>
                 </div>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff', marginBottom: '3px', lineHeight: 1.3 }}>{inc.rule}</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', marginBottom: '5px', lineHeight: 1.3 }}>{inc.rule}</div>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  {inc.namespace && <span style={{ fontSize: '9px', color: 'rgba(88,166,255,0.8)', background: 'rgba(88,166,255,0.08)', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(88,166,255,0.2)' }}>{inc.namespace}</span>}
-                  {inc.pod && <span style={{ fontSize: '9px', color: '#4a5568', background: '#0d1117', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(0,255,159,0.08)' }}>{inc.pod}</span>}
-                  {inc.mitre_tags?.map(t => <span key={t} style={{ fontSize: '9px', color: 'rgba(188,140,255,0.8)', background: 'rgba(188,140,255,0.06)', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(188,140,255,0.2)' }}>{t}</span>)}
-                  <span style={{ fontSize: '9px', color: '#4a5568', marginLeft: 'auto' }}>
+                  {inc.namespace && <span style={{ fontSize: '10px', color: 'rgba(88,166,255,0.8)', background: 'rgba(88,166,255,0.08)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(88,166,255,0.2)' }}>{inc.namespace}</span>}
+                  {inc.pod && <span style={{ fontSize: '10px', color: '#4a5568', background: '#0d1117', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(0,255,159,0.08)' }}>{inc.pod}</span>}
+                  {inc.mitre_tags?.map(t => <span key={t} style={{ fontSize: '10px', color: 'rgba(188,140,255,0.8)', background: 'rgba(188,140,255,0.06)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(188,140,255,0.2)' }}>{t}</span>)}
+                  <span style={{ fontSize: '10px', color: '#4a5568', marginLeft: 'auto' }}>
                     {Math.round(inc.confidence * 100)}% confidence
                   </span>
                 </div>
@@ -170,7 +170,7 @@ export default function ThreatFeed() {
       {selected && (
         <div style={{ borderLeft: '1px solid rgba(0,255,159,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0d1117' }}>
           <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <span style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px' }}>Incident detail</span>
+            <span style={{ fontSize: '11px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px' }}>Incident detail</span>
             <button onClick={() => setSelected(null)} style={{ fontSize: '12px', color: '#4a5568', background: 'transparent', border: 'none', cursor: 'pointer' }}>✕</button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px', fontFamily: 'monospace' }}>
@@ -186,34 +186,34 @@ export default function ThreatFeed() {
               <Row label="MITRE" value={selected.mitre_tags?.join(', ') || 'none'} />
             </DetailSection>
             <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '8px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)' }}>AI Assessment</div>
+              <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)' }}>AI Assessment</div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff9f', boxShadow: '0 0 6px #00ff9f', flexShrink: 0 }} />
-                <span style={{ fontSize: '8px', color: '#00ff9f', letterSpacing: '1px' }}>ARGUS AI · claude-sonnet-4-6</span>
+                <span style={{ fontSize: '10px', color: '#00ff9f', letterSpacing: '1px' }}>ARGUS AI · claude-sonnet-4-6</span>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,159,0.1)' }} />
-                <span style={{ fontSize: '8px', color: '#4a5568' }}>{Math.round(selected.confidence * 100)}% confidence</span>
+                <span style={{ fontSize: '10px', color: '#4a5568' }}>{Math.round(selected.confidence * 100)}% confidence</span>
               </div>
 
               <div style={{ background: 'rgba(0,255,159,0.03)', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '6px', padding: '10px 12px', marginBottom: '10px', position: 'relative' }}>
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #00ff9f, transparent)', borderRadius: '6px 0 0 6px' }} />
-                <p style={{ fontSize: '10px', color: '#c9d1d9', lineHeight: 1.6, fontFamily: 'sans-serif', margin: 0 }}>{selected.assessment}</p>
+                <p style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.7, fontFamily: 'sans-serif', margin: 0 }}>{selected.assessment}</p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
                 <div style={{ background: selected.likely_false_positive ? 'rgba(0,255,159,0.06)' : 'rgba(255,45,85,0.06)', border: `1px solid ${selected.likely_false_positive ? 'rgba(0,255,159,0.2)' : 'rgba(255,45,85,0.2)'}`, borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '7px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>False positive</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: selected.likely_false_positive ? '#00ff9f' : '#ff2d55' }}>{selected.likely_false_positive ? 'Yes' : 'No'}</div>
+                  <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>False positive</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: selected.likely_false_positive ? '#00ff9f' : '#ff2d55' }}>{selected.likely_false_positive ? 'Yes' : 'No'}</div>
                 </div>
                 <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.2)', borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '7px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Confidence</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#58a6ff' }}>{Math.round(selected.confidence * 100)}%</div>
+                  <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Confidence</div>
+                  <div style={{ fontSize: '18px', fontWeight: 700, color: '#58a6ff' }}>{Math.round(selected.confidence * 100)}%</div>
                 </div>
               </div>
 
               <div style={{ background: 'rgba(255,159,10,0.04)', border: '1px solid rgba(255,159,10,0.15)', borderRadius: '6px', padding: '8px 10px' }}>
-                <div style={{ fontSize: '7px', color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Blast radius</div>
-                <p style={{ fontSize: '9px', color: '#8b949e', lineHeight: 1.5, fontFamily: 'sans-serif', margin: 0 }}>{selected.blast_radius}</p>
+                <div style={{ fontSize: '9px', color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px' }}>Blast radius</div>
+                <p style={{ fontSize: '11px', color: '#8b949e', lineHeight: 1.6, fontFamily: 'sans-serif', margin: 0 }}>{selected.blast_radius}</p>
               </div>
             </div>
             <DetailSection title="Response">
@@ -241,7 +241,7 @@ export default function ThreatFeed() {
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: '14px' }}>
-      <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)' }}>{title}</div>
+      <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)' }}>{title}</div>
       {children}
     </div>
   )
@@ -250,8 +250,8 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 function Row({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '2px 0', gap: '8px' }}>
-      <span style={{ fontSize: '10px', color: '#4a5568', flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: '10px', color: color || '#8b949e', textAlign: 'right', wordBreak: 'break-all' }}>{value}</span>
+      <span style={{ fontSize: '11px', color: '#6b7280', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: '11px', color: color || '#c9d1d9', textAlign: 'right', wordBreak: 'break-all' }}>{value}</span>
     </div>
   )
 }
