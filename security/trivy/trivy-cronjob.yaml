@@ -1,0 +1,74 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trivy-scan
+  namespace: security
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app: trivy-scanner
+        spec:
+          serviceAccountName: trivy-scanner
+          restartPolicy: OnFailure
+          containers:
+          - name: trivy
+            image: aquasec/trivy:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Scan all running images in the cluster
+              kubectl get pods --all-namespaces -o jsonpath='{range .items[*]}{.spec.containers[*].image}{"\n"}{end}' | sort -u | while read image; do
+                echo "Scanning $image..."
+                trivy image --severity CRITICAL,HIGH --format json --output /tmp/scan-result.json "$image"
+                
+                # Post results to Argus API
+                curl -X POST http://argus-agent.argus-system.svc.cluster.local:8000/api/cve-scan \
+                  -H "Content-Type: application/json" \
+                  -d @/tmp/scan-result.json
+              done
+            volumeMounts:
+            - name: trivy-cache
+              mountPath: /root/.cache/trivy
+          volumes:
+          - name: trivy-cache
+            emptyDir: {}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trivy-scanner
+  namespace: security
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trivy-scanner
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trivy-scanner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trivy-scanner
+subjects:
+- kind: ServiceAccount
+  name: trivy-scanner
+  namespace: security
+
+# Made with Bob
