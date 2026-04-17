@@ -5,10 +5,10 @@ export default {
     extend: {
       colors: {
         cyber: {
-          bg: '#0a0e1a',
-          bg2: '#0f1525',
-          bg3: '#141c2e',
-          bg4: '#1a2338',
+          bg: '#060912',
+          bg2: '#0a0f1e',
+          bg3: '#0d1320',
+          bg4: '#111827',
           border: 'rgba(99,179,237,0.12)',
           cyan: '#00d4ff',
           red: '#ff4757',

@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 
 export default function App() {
   return (
-    <div className="flex flex-col h-screen bg-[#0a0e1a]">
+    <div className="flex flex-col h-screen bg-[#060912]">
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
@@ -40,7 +40,7 @@ export default function App() {
 
 function TopBar() {
   return (
-    <div className="flex items-center gap-4 px-4 h-11 bg-[#0f1525] border-b border-[rgba(99,179,237,0.12)] flex-shrink-0">
+    <div className="flex items-center gap-4 px-4 h-11 bg-[#0a0f1e] border-b border-[rgba(99,179,237,0.12)] flex-shrink-0">
       <div className="flex items-center gap-2">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <polygon points="12,2 22,20 2,20" fill="none" stroke="#00d4ff" strokeWidth="1.5"/>
@@ -85,7 +85,7 @@ function Clock() {
 
 function Sidebar() {
   return (
-    <div className="w-12 bg-[#0f1525] border-r border-[rgba(99,179,237,0.12)] flex flex-col items-center py-3 gap-1 flex-shrink-0">
+    <div className="w-12 bg-[#0a0f1e] border-r border-[rgba(99,179,237,0.12)] flex flex-col items-center py-3 gap-1 flex-shrink-0">
       {NAV_ITEMS.map(({ path, icon: Icon, label }) => (
         <NavLink
           key={path}
@@ -96,7 +96,7 @@ function Sidebar() {
             `w-9 h-9 rounded-lg flex items-center justify-center transition-all cursor-pointer
             ${isActive
               ? 'bg-[rgba(0,212,255,0.1)] text-[#00d4ff] border border-[rgba(0,212,255,0.25)]'
-              : 'text-[#5a6478] hover:bg-[#1a2338] hover:text-[#00d4ff]'
+              : 'text-[#5a6478] hover:bg-[#111827] hover:text-[#00d4ff]'
             }`
           }
         >
