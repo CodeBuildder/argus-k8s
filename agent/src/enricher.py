@@ -273,6 +273,56 @@ async def fetch_policy_violations(namespace: str) -> list[dict] | None:
         return None
 
 
+async def fetch_vulnerability_report(namespace: str, pod_name: str) -> dict | None:
+    """
+    Fetch Trivy vulnerability report for the pod's container image.
+    Reads VulnerabilityReport CRDs from the Kubernetes API.
+    """
+    if not namespace or not pod_name:
+        return None
+    try:
+        k8s = _get_k8s_client()
+        if not k8s:
+            return None
+        custom_api = k8s.CustomObjectsApi()
+        loop = asyncio.get_event_loop()
+        reports = await loop.run_in_executor(
+            None,
+            lambda: custom_api.list_namespaced_custom_object(
+                group="aquasecurity.github.io",
+                version="v1alpha1",
+                namespace=namespace,
+                plural="vulnerabilityreports",
+            )
+        )
+        total_critical = 0
+        total_high = 0
+        top_cves = []
+        for report in reports.get("items", []):
+            if pod_name in report.get("metadata", {}).get("name", ""):
+                summary = report.get("report", {}).get("summary", {})
+                total_critical += summary.get("criticalCount", 0)
+                total_high += summary.get("highCount", 0)
+                vulns = report.get("report", {}).get("vulnerabilities", [])
+                for v in vulns[:3]:
+                    if v.get("severity") in ("CRITICAL", "HIGH"):
+                        top_cves.append({
+                            "id": v.get("vulnerabilityID"),
+                            "severity": v.get("severity"),
+                            "package": v.get("resource"),
+                            "fixed_version": v.get("fixedVersion"),
+                        })
+        return {
+            "critical_count": total_critical,
+            "high_count": total_high,
+            "top_cves": top_cves[:5],
+            "risk_score": min(100, total_critical * 20 + total_high * 5),
+        }
+    except Exception as e:
+        log.warning("trivy_fetch_failed", pod=pod_name, namespace=namespace, error=str(e))
+        return None
+
+
 async def enrich_context(alert_payload: dict) -> dict:
     """
     Main enrichment entry point. Runs all data source queries concurrently.
@@ -310,19 +360,20 @@ async def enrich_context(alert_payload: dict) -> dict:
 
     # Run all queries concurrently with timeout
     try:
-        pod_ctx, logs, flows, violations = await asyncio.wait_for(
+        pod_ctx, logs, flows, violations, vuln_report = await asyncio.wait_for(
             asyncio.gather(
                 fetch_pod_context(namespace, pod_name),
                 fetch_recent_logs(namespace, pod_name),
                 fetch_network_flows(namespace, pod_name),
                 fetch_policy_violations(namespace),
+                fetch_vulnerability_report(namespace, pod_name),
                 return_exceptions=True,
             ),
             timeout=ENRICHMENT_TIMEOUT,
         )
     except asyncio.TimeoutError:
         log.warning("enrichment_timeout", timeout=ENRICHMENT_TIMEOUT)
-        pod_ctx = logs = flows = violations = None
+        pod_ctx = logs = flows = violations = vuln_report = None
 
     # Handle exceptions from individual queries (return_exceptions=True)
     if isinstance(pod_ctx, Exception):
@@ -333,6 +384,8 @@ async def enrich_context(alert_payload: dict) -> dict:
         flows = None
     if isinstance(violations, Exception):
         violations = None
+    if isinstance(vuln_report, Exception):
+        vuln_report = None
 
     duration_ms = round((asyncio.get_event_loop().time() - start) * 1000)
 
@@ -342,6 +395,7 @@ async def enrich_context(alert_payload: dict) -> dict:
             ("loki", logs),
             ("hubble", flows),
             ("kyverno", violations),
+            ("trivy", vuln_report),
         ]
         if val is not None
     ]
@@ -359,6 +413,7 @@ async def enrich_context(alert_payload: dict) -> dict:
         "logs": logs,
         "flows": flows,
         "violations": violations,
+        "vulnerabilities": vuln_report,
         "enrichment_duration_ms": duration_ms,
         "enrichment_sources": successful_sources,
     }

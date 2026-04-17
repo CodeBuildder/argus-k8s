@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: trivy-system
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: trivy-operator
+  namespace: kube-system
+spec:
+  repo: https://aquasecurity.github.io/helm-charts/
+  chart: trivy-operator
+  version: "0.22.0"
+  targetNamespace: trivy-system
+  valuesContent: |-
+    trivy:
+      ignoreUnfixed: true
+      severity: CRITICAL,HIGH
+    operator:
+      scanJobTimeout: 5m
+      vulnerabilityReportsPlugin: Trivy
+      scanNamespaceLabelSelector: ""

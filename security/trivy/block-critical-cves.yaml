@@ -1,0 +1,31 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-critical-cves
+  annotations:
+    policies.kyverno.io/title: Block Critical CVEs
+    policies.kyverno.io/description: >-
+      Blocks deployment of images with CRITICAL severity CVEs
+      as reported by Trivy vulnerability scanning.
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: check-vulnerability-report
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - prod
+      validate:
+        message: >-
+          Image {{ request.object.spec.containers[0].image }} has CRITICAL
+          vulnerabilities. Fix CVEs before deploying to prod.
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.metadata.annotations.\"trivy.aquasec.com/critical-count\" || '0' }}"
+                operator: GreaterThan
+                value: "0"
