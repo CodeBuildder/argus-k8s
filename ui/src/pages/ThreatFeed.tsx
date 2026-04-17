@@ -187,34 +187,50 @@ export default function ThreatFeed() {
               <Row label="MITRE" value={selected.mitre_tags?.join(', ') || 'none'} />
             </DetailSection>
             <div style={{ marginBottom: '14px' }}>
-              <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500 }}>AI Assessment</div>
+              <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace' }}>AI Assessment</div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff9f', boxShadow: '0 0 6px #00ff9f', flexShrink: 0 }} />
-                <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '10px', color: '#00ff9f', letterSpacing: '1px' }}>ARGUS AI · claude-sonnet-4-6</span>
+                <span style={{ fontSize: '9px', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>ARGUS AI · claude-sonnet-4-6</span>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,159,0.1)' }} />
-                <span style={{ fontSize: '10px', color: '#4a5568' }}>{Math.round(selected.confidence * 100)}% confidence</span>
+                <span style={{ fontSize: '9px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(selected.confidence * 100)}% confidence</span>
               </div>
 
-              <div style={{ background: 'rgba(0,255,159,0.03)', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '6px', padding: '10px 12px', marginBottom: '10px', position: 'relative' }}>
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '2px', background: 'linear-gradient(180deg, #00ff9f, transparent)', borderRadius: '6px 0 0 6px' }} />
-                <p style={{ fontSize: '13px', lineHeight: 1.8, color: '#d1d5db', fontFamily: 'Inter, sans-serif', fontWeight: 400, letterSpacing: '0.01em', margin: 0 }}>{selected.assessment}</p>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
-                <div style={{ background: selected.likely_false_positive ? 'rgba(0,255,159,0.06)' : 'rgba(255,45,85,0.06)', border: `1px solid ${selected.likely_false_positive ? 'rgba(0,255,159,0.2)' : 'rgba(255,45,85,0.2)'}`, borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, letterSpacing: '0.05em', fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', marginBottom: '4px' }}>False positive</div>
-                  <div style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em', color: selected.likely_false_positive ? '#00ff9f' : '#ff2d55' }}>{selected.likely_false_positive ? 'Yes' : 'No'}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ background: 'rgba(255,45,85,0.06)', border: '1px solid rgba(255,45,85,0.15)', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                    <span style={{ fontSize: '10px', color: '#ff2d55', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>01</span>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff2d55', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>What happened</span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, margin: 0, fontFamily: 'Inter, sans-serif' }}>{selected.assessment}</p>
                 </div>
-                <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.2)', borderRadius: '6px', padding: '8px 10px', textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Inter, sans-serif', fontWeight: 600, letterSpacing: '0.05em', fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', marginBottom: '4px' }}>Confidence</div>
-                  <div style={{ fontSize: '22px', fontWeight: 700, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em', color: '#58a6ff' }}>{Math.round(selected.confidence * 100)}%</div>
+
+                <div style={{ background: 'rgba(255,159,10,0.06)', border: '1px solid rgba(255,159,10,0.15)', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                    <span style={{ fontSize: '10px', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>02</span>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Blast radius</span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#d1d5db', lineHeight: 1.6, margin: 0, fontFamily: 'Inter, sans-serif' }}>{selected.blast_radius}</p>
+                </div>
+
+                <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.15)', borderRadius: '8px', padding: '10px 12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px' }}>
+                    <span style={{ fontSize: '10px', color: '#58a6ff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>03</span>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Recommended action</span>
+                  </div>
+                  <p style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', margin: 0, fontFamily: 'Inter, sans-serif' }}>{selected.recommended_action}</p>
                 </div>
               </div>
 
-              <div style={{ background: 'rgba(255,159,10,0.04)', border: '1px solid rgba(255,159,10,0.15)', borderRadius: '6px', padding: '8px 10px' }}>
-                <div style={{ fontSize: '9px', color: '#ff9f0a', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '4px', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500 }}>Blast radius</div>
-                <p style={{ fontSize: '12px', lineHeight: 1.7, fontFamily: 'Inter, sans-serif', color: '#9ca3af', margin: 0 }}>{selected.blast_radius}</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <div style={{ background: selected.likely_false_positive ? 'rgba(0,255,159,0.06)' : 'rgba(255,45,85,0.06)', border: `1px solid ${selected.likely_false_positive ? 'rgba(0,255,159,0.2)' : 'rgba(255,45,85,0.2)'}`, borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>False positive</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: selected.likely_false_positive ? '#00ff9f' : '#ff2d55', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em' }}>{selected.likely_false_positive ? 'Yes' : 'No'}</div>
+                </div>
+                <div style={{ background: 'rgba(88,166,255,0.06)', border: '1px solid rgba(88,166,255,0.2)', borderRadius: '8px', padding: '10px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '5px', fontFamily: 'Inter, sans-serif', fontWeight: 600 }}>Confidence</div>
+                  <div style={{ fontSize: '20px', fontWeight: 700, color: '#58a6ff', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.02em' }}>{Math.round(selected.confidence * 100)}%</div>
+                </div>
               </div>
             </div>
             <DetailSection title="Response">
