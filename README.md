@@ -69,6 +69,31 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 - Background task processing — 202 returned immediately, Falco never blocks
 - 18 unit tests covering validation, dedup, field mapping
 
+## Testing
+
+The agent has a full unit test suite covering all pipeline components.
+
+| Module | Tests | Coverage |
+|---|---|---|
+| Webhook receiver | 18 | Validation, deduplication, field mapping |
+| Context enricher | 16 | K8s/Loki/Hubble mocks, partial failure handling |
+| Claude reasoning | 22 | Decision parsing, model selection, error fallback |
+| Action router | 15 | All 5 action handlers, KILL confidence gate |
+| **Total** | **71** | **All passing** |
+
+### Run tests locally
+
+```bash
+cd agent
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python -m pytest tests/ -v
+```
+
+### CI
+Tests run automatically on every PR via GitHub Actions.
+Kyverno policy tests also run on every change to security/kyverno/.
+
 ## Observability status
 
 ### Prometheus — Metrics collection
