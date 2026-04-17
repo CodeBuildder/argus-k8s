@@ -19,7 +19,7 @@ const NAV_ITEMS = [
 
 export default function App() {
   return (
-    <div className="flex flex-col h-screen bg-[#060912]">
+    <div className="flex flex-col h-screen bg-[#060912]" style={{ fontFamily: "'Inter', sans-serif" }}>
       <TopBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
