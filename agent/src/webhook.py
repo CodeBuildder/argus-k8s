@@ -171,21 +171,25 @@ def is_duplicate(alert: FalcoAlert, window_seconds: int = DEDUP_WINDOW_SECONDS) 
 
 async def process_alert(payload: dict) -> None:
     """
-    Background task: pass enriched alert to the reasoning pipeline.
-    Called after webhook returns 200 so Falco doesn't time out.
+    Background task: full agent pipeline.
+    Delegates to main.py process_alert which has full pipeline wired.
     """
-    log.info("alert_processing_started", rule=payload["rule"], priority=payload["priority"])
-    # TODO: wire to enricher in issue #14
-    # from enricher import enrich_context
-    # from reasoning import reason_about_threat
-    # from actions import route_action
-    # from audit import audit_log
-    #
-    # context = await enrich_context(payload)
-    # decision = await reason_about_threat(payload, context)
-    # await route_action(decision)
-    # await audit_log(payload, context, decision)
-    log.info("alert_processing_complete", rule=payload["rule"])
+    import os
+    from enricher import enrich_context
+    from reasoning import reason_about_threat
+    from actions import route_action
+    from audit import audit_log
+    import structlog as _log
+    _l = _log.get_logger()
+    rule = payload.get("rule", "unknown")
+    _l.info("pipeline_started", rule=rule)
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    notify_webhook = os.getenv("SLACK_WEBHOOK_URL", "")
+    context = await enrich_context(payload)
+    decision = await reason_about_threat(context, api_key)
+    action_result = await route_action(payload, decision, notify_webhook or None)
+    await audit_log(payload, context, decision, action_result)
+    _l.info("pipeline_complete", rule=rule, severity=decision.severity.value, action=action_result.get("action"), status=action_result.get("status"))
 
 
 @router.post("/falco/webhook", status_code=202)
