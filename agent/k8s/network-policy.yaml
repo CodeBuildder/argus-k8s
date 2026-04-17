@@ -1,0 +1,45 @@
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-argus-egress-internet
+  namespace: argus-system
+spec:
+  description: "Allow argus-agent to reach Anthropic API"
+  endpointSelector:
+    matchLabels:
+      app: argus-agent
+  egress:
+    - toEntities:
+        - world
+    - toEntities:
+        - cluster
+    - toEntities:
+        - kube-apiserver
+---
+apiVersion: "cilium.io/v2"
+kind: CiliumNetworkPolicy
+metadata:
+  name: allow-argus-egress-cluster
+  namespace: argus-system
+spec:
+  description: "Allow argus-agent to reach monitoring, kube-system, prod, staging"
+  endpointSelector:
+    matchLabels:
+      app: argus-agent
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": monitoring
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": prod
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": staging
+    - toEntities:
+        - kube-apiserver
+    - toEntities:
+        - world
