@@ -40,17 +40,17 @@ export default function App() {
 
 function TopBar() {
   return (
-    <div className="flex items-center gap-4 px-4 h-11 bg-[#0a0f1e] border-b border-[rgba(99,179,237,0.12)] flex-shrink-0">
+    <div className="flex items-center gap-4 px-6 h-[56px] bg-[#0a0f1e] border-b border-[rgba(99,179,237,0.12)] flex-shrink-0">
       <div className="flex items-center gap-2">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <polygon points="12,2 22,20 2,20" fill="none" stroke="#00d4ff" strokeWidth="1.5"/>
           <circle cx="12" cy="14" r="3" fill="none" stroke="#00d4ff" strokeWidth="1.2"/>
           <line x1="12" y1="7" x2="12" y2="11" stroke="#00d4ff" strokeWidth="1.2"/>
         </svg>
-        <span className="text-[#00d4ff] font-bold tracking-widest text-sm uppercase">Argus</span>
-        <span className="text-[#5a6478] text-[9px] tracking-widest uppercase">Security Console</span>
+        <span className="text-[#00d4ff] font-bold tracking-widest text-[15px] uppercase">Argus</span>
+        <span className="text-[#5a6478] text-[10px] tracking-widest uppercase">Security Console</span>
       </div>
-      <div className="flex-1 flex gap-6 px-6">
+      <div className="flex-1 flex gap-16 px-6">
         <KPI label="Critical" value="3" color="text-[#ff4757]" />
         <KPI label="Warnings" value="7" color="text-[#ff6b35]" />
         <KPI label="Events/hr" value="142" color="text-[#00d4ff]" />
@@ -68,8 +68,8 @@ function TopBar() {
 function KPI({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div className="flex flex-col items-center gap-0">
-      <span className={`text-base font-bold ${color}`}>{value}</span>
-      <span className="text-[9px] text-[#5a6478] uppercase tracking-wider">{label}</span>
+      <span className={`text-[18px] font-bold ${color}`}>{value}</span>
+      <span className="text-[10px] text-[#5a6478] uppercase tracking-wider">{label}</span>
     </div>
   )
 }
