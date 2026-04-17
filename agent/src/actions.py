@@ -14,6 +14,7 @@ Safety rules:
 
 import asyncio
 import json
+import re
 from datetime import datetime, timezone
 from typing import Any
 import httpx
@@ -110,7 +111,7 @@ async def action_isolate(alert: dict, decision: Any) -> dict:
             "labels": {
                 "managed-by": "argus",
                 "argus-action": "isolation",
-                "argus-rule": alert.get("rule", "unknown")[:63],
+                "argus-rule": re.sub(r'[^A-Za-z0-9._-]', '-', alert.get("rule", "unknown"))[:63].strip('-'),
             }
         },
         "spec": {
