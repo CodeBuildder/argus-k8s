@@ -98,7 +98,7 @@ import time
 incident_store: list[dict] = []
 
 @app.get("/incidents")
-async def get_incidents(limit: int = 50, severity: str = None, namespace: str = None):
+async def get_incidents(limit: int = 50, severity: str | None = None, namespace: str | None = None):
     incidents = list(reversed(incident_store[-200:]))
     if severity:
         incidents = [i for i in incidents if i.get("severity", "").upper() == severity.upper()]
@@ -134,6 +134,7 @@ async def get_attack_chain(chain_id: str):
     chain = next((c for c in attack_chains if c["id"] == chain_id), None)
     if not chain:
         raise HTTPException(status_code=404, detail="Chain not found")
+    return chain
 
 @app.post("/incidents/summarize")
 async def summarize_incidents(request: Request):
@@ -208,6 +209,10 @@ Provide a concise, actionable summary for security operators."""
             "generated_at": datetime.now(timezone.utc).isoformat()
         }
         
+
+    except Exception as e:
+        log.error("incident_summary_failed", error=str(e))
+        return {"error": f"Failed to generate summary: {str(e)}"}
 
 @app.post("/threat-hunt")
 async def threat_hunt(request: Request):
@@ -447,8 +452,14 @@ async def forecast_risk(request: Request):
             "high_incidents": len([i for i in recent_incidents if i.get("severity") == "HIGH"]),
             "auto_remediated": len([i for i in recent_incidents if i.get("action_taken") in ("ISOLATE", "KILL")]),
             "false_positives": len([i for i in recent_incidents if i.get("likely_false_positive")]),
-            "attack_chains": len(attack_chains) if 'attack_chains' in globals() else 0
+            "attack_chains": 0
         }
+        
+        try:
+            from attack_chain import attack_chains
+            metrics["attack_chains"] = len(attack_chains)
+        except:
+            pass
         
         client = Anthropic(api_key=api_key)
         
@@ -488,26 +499,6 @@ Be concise and actionable."""
     except Exception as e:
         log.error("risk_forecast_failed", error=str(e))
         return {"error": f"Failed to generate forecast: {str(e)}"}
-
-            }
-        
-        return {
-            "query": query_info.get("query", nl_query),
-            "source": query_info.get("source", "loki"),
-            "explanation": query_info.get("explanation", ""),
-            "results": [],  # Would be populated by actual query execution
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-        
-    except Exception as e:
-        log.error("threat_hunt_failed", error=str(e))
-        return {"error": f"Failed to process query: {str(e)}"}
-
-    except Exception as e:
-        log.error("incident_summary_failed", error=str(e))
-        return {"error": f"Failed to generate summary: {str(e)}"}
-
-    return chain
 
 
 @app.exception_handler(Exception)
