@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: argus-agent
+  namespace: argus-system
+  labels:
+    app: argus-agent
+    app.kubernetes.io/managed-by: argus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: argus-agent
+  template:
+    metadata:
+      labels:
+        app: argus-agent
+    spec:
+      serviceAccountName: argus-agent
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: argus-agent
+          image: argus-agent:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: argus-secrets
+                  key: anthropic-api-key
+            - name: IN_CLUSTER
+              value: "true"
+            - name: LOKI_URL
+              value: "http://loki.monitoring.svc.cluster.local:3100"
+            - name: HUBBLE_URL
+              value: "http://hubble-relay.kube-system.svc.cluster.local:4245"
+            - name: DEDUP_WINDOW_SECONDS
+              value: "300"
+            - name: AUTO_ISOLATE_CRITICAL
+              value: "false"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
