@@ -47,6 +47,77 @@ const NODES = [
   { name: 'k3s-worker2', ip: '192.168.139.45' },
 ]
 
+type PodStatus = 'threat' | 'risk' | 'safe' | 'isolated'
+type NodeStatus = 'threat' | 'risk' | 'safe'
+
+function PodStatusIcon({ status }: { status: PodStatus }) {
+  if (status === 'threat') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <polygon points="7,1 13,13 1,13" stroke="#ff2d55" strokeWidth="1.2" fill="rgba(255,45,85,0.2)" />
+        <line x1="7" y1="5" x2="7" y2="9" stroke="#ff2d55" strokeWidth="1.2" strokeLinecap="round" />
+        <circle cx="7" cy="11" r="0.7" fill="#ff2d55" />
+      </svg>
+    )
+  }
+
+  if (status === 'risk') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="12" height="12" rx="2" stroke="#ff9f0a" strokeWidth="1.2" fill="rgba(255,159,10,0.1)" />
+        <line x1="7" y1="4" x2="7" y2="8" stroke="#ff9f0a" strokeWidth="1.2" strokeLinecap="round" />
+        <circle cx="7" cy="10.5" r="0.7" fill="#ff9f0a" />
+      </svg>
+    )
+  }
+
+  if (status === 'isolated') {
+    return (
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="6" stroke="#4a5568" strokeWidth="1.2" fill="rgba(75,85,99,0.1)" />
+        <line x1="4" y1="4" x2="10" y2="10" stroke="#4a5568" strokeWidth="1.2" strokeLinecap="round" />
+        <line x1="10" y1="4" x2="4" y2="10" stroke="#4a5568" strokeWidth="1.2" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+      <circle cx="7" cy="7" r="6" stroke="#00ff9f" strokeWidth="1.2" fill="rgba(0,255,159,0.08)" />
+      <polyline points="4,7 6.5,9.5 10,5" stroke="#00ff9f" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function NodeStatusIcon({ status }: { status: NodeStatus }) {
+  if (status === 'threat') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M8 2L14 13H2L8 2Z" stroke="#ff2d55" strokeWidth="1.2" fill="rgba(255,45,85,0.15)" />
+        <line x1="8" y1="6" x2="8" y2="10" stroke="#ff2d55" strokeWidth="1.2" />
+        <circle cx="8" cy="11.5" r="0.8" fill="#ff2d55" />
+      </svg>
+    )
+  }
+
+  if (status === 'risk') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="2" y="2" width="12" height="12" rx="2" stroke="#ff9f0a" strokeWidth="1.2" fill="rgba(255,159,10,0.1)" />
+        <line x1="8" y1="5" x2="8" y2="9" stroke="#ff9f0a" strokeWidth="1.2" />
+        <circle cx="8" cy="11" r="0.8" fill="#ff9f0a" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M8 2L13 5V9C13 11.5 10.5 13.5 8 14C5.5 13.5 3 11.5 3 9V5L8 2Z" stroke="#00ff9f" strokeWidth="1.2" fill="rgba(0,255,159,0.08)" />
+      <polyline points="6,8 7.5,9.5 10,7" stroke="#00ff9f" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 function ImpactDiagram({ incident }: { incident: any }) {
   const [scanPos, setScanPos] = React.useState(0)
   const [barsAnimated, setBarsAnimated] = React.useState(false)
@@ -102,7 +173,9 @@ function ImpactDiagram({ incident }: { incident: any }) {
           return (
             <div key={node.name} style={{ background: nodeBgs[status], border: `1px solid ${nodeBorders[status]}`, borderRadius: '7px', padding: '8px 10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: nodeColors[status], boxShadow: isThreat ? `0 0 6px ${nodeColors[status]}` : 'none', flexShrink: 0, animation: isThreat ? 'pulse 1.5s infinite' : 'none' }} />
+                <div style={{ width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: isThreat ? 'pulse 1.5s infinite' : 'none' }}>
+                  <NodeStatusIcon status={status} />
+                </div>
                 <span style={{ fontSize: '10px', fontWeight: 700, color: '#e6edf3', fontFamily: 'JetBrains Mono, monospace' }}>{node.name}</span>
                 <span style={{ fontSize: '8px', color: nodeColors[status], fontFamily: 'JetBrains Mono, monospace', marginLeft: '2px' }}>{nodeLabels[status]}</span>
                 <span style={{ fontSize: '8px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{node.ip}</span>
@@ -110,30 +183,30 @@ function ImpactDiagram({ incident }: { incident: any }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                 {isThreat && threatPod && (
                   <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,45,85,0.15)', border: '1px solid rgba(255,45,85,0.4)', color: '#ff2d55', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ff2d55', display: 'inline-block', animation: 'pulse 1.5s infinite' }} />
+                    <PodStatusIcon status="threat" />
                     {threatPod}
                     {threatNs && <span style={{ fontSize: '7px', padding: '0 3px', background: 'rgba(88,166,255,0.15)', borderRadius: '2px', color: '#58a6ff' }}>{threatNs}</span>}
                   </span>
                 )}
                 {isThreat && (
                   <>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(75,85,99,0.2)', border: '1px solid rgba(75,85,99,0.3)', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>isolated api-gateway</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>backend-svc</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>falco-agent</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(75,85,99,0.2)', border: '1px solid rgba(75,85,99,0.3)', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="isolated" />isolated api-gateway</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="risk" />backend-svc</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />falco-agent</span>
                   </>
                 )}
                 {status === 'risk' && (
                   <>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>postgres-0</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>auth-service</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>prometheus</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="risk" />postgres-0</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="risk" />auth-service</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />prometheus</span>
                   </>
                 )}
                 {status === 'safe' && (
                   <>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>argus-agent</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>kyverno</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>cilium</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />argus-agent</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />kyverno</span>
+                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />cilium</span>
                   </>
                 )}
               </div>
