@@ -170,8 +170,29 @@ function ImpactDiagram({ incident }: { incident: any }) {
         {NODES.map(node => {
           const status = getNodeStatus(node.name) as 'threat' | 'risk' | 'safe'
           const isThreat = status === 'threat'
+          const isRisk = status === 'risk'
+
+          const threatPods = isThreat && threatPod ? [
+            { name: threatPod, status: 'threat' as PodStatus, ns: threatNs },
+            { name: 'api-gateway (isolated)', status: 'isolated' as PodStatus, ns: null },
+          ] : []
+
+          const riskPods = isRisk ? [
+            { name: 'postgres-0', status: 'risk' as PodStatus, ns: 'prod' },
+            { name: 'auth-service', status: 'risk' as PodStatus, ns: 'prod' },
+            { name: 'prometheus', status: 'safe' as PodStatus, ns: 'monitoring' },
+          ] : []
+
+          const safePods = !isThreat && !isRisk ? [
+            { name: 'argus-agent', status: 'safe' as PodStatus, ns: 'argus-system' },
+            { name: 'kyverno', status: 'safe' as PodStatus, ns: 'kyverno' },
+            { name: 'cilium', status: 'safe' as PodStatus, ns: 'kube-system' },
+          ] : []
+
+          const allPods = [...threatPods, ...riskPods, ...safePods]
+
           return (
-            <div key={node.name} style={{ background: nodeBgs[status], border: `1px solid ${nodeBorders[status]}`, borderRadius: '7px', padding: '8px 10px' }}>
+            <div key={node.name} style={{ background: nodeBgs[status], border: `1px solid ${nodeBorders[status]}`, borderRadius: '7px', padding: '8px 10px', animation: 'fadeInUp 0.2s ease-out both' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                 <div style={{ width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, animation: isThreat ? 'pulse 1.5s infinite' : 'none' }}>
                   <NodeStatusIcon status={status} />
@@ -181,34 +202,32 @@ function ImpactDiagram({ incident }: { incident: any }) {
                 <span style={{ fontSize: '8px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{node.ip}</span>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {isThreat && threatPod && (
-                  <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,45,85,0.15)', border: '1px solid rgba(255,45,85,0.4)', color: '#ff2d55', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <PodStatusIcon status="threat" />
-                    {threatPod}
-                    {threatNs && <span style={{ fontSize: '7px', padding: '0 3px', background: 'rgba(88,166,255,0.15)', borderRadius: '2px', color: '#58a6ff' }}>{threatNs}</span>}
+                {allPods.map((pod, i) => (
+                  <span key={`${pod.name}-${i}`} style={{
+                    fontSize: '9px',
+                    padding: '2px 7px',
+                    borderRadius: '4px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: pod.status === 'threat' ? 'rgba(255,45,85,0.12)' :
+                               pod.status === 'risk' ? 'rgba(255,159,10,0.08)' :
+                               pod.status === 'isolated' ? 'rgba(75,85,99,0.15)' :
+                               'rgba(0,255,159,0.05)',
+                    border: `1px solid ${pod.status === 'threat' ? 'rgba(255,45,85,0.35)' :
+                            pod.status === 'risk' ? 'rgba(255,159,10,0.25)' :
+                            pod.status === 'isolated' ? 'rgba(75,85,99,0.3)' :
+                            'rgba(0,255,159,0.15)'}`,
+                    color: pod.status === 'threat' ? '#ff2d55' :
+                           pod.status === 'risk' ? '#ff9f0a' :
+                           pod.status === 'isolated' ? '#4a5568' : '#00ff9f',
+                  }}>
+                    <PodStatusIcon status={pod.status} />
+                    {pod.name}
+                    {pod.ns && <span style={{ fontSize: '7px', padding: '0 3px', background: 'rgba(88,166,255,0.12)', borderRadius: '2px', color: '#58a6ff' }}>{pod.ns}</span>}
                   </span>
-                )}
-                {isThreat && (
-                  <>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(75,85,99,0.2)', border: '1px solid rgba(75,85,99,0.3)', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="isolated" />isolated api-gateway</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="risk" />backend-svc</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />falco-agent</span>
-                  </>
-                )}
-                {status === 'risk' && (
-                  <>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="risk" />postgres-0</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(255,159,10,0.08)', border: '1px solid rgba(255,159,10,0.25)', color: '#ff9f0a', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="risk" />auth-service</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />prometheus</span>
-                  </>
-                )}
-                {status === 'safe' && (
-                  <>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />argus-agent</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />kyverno</span>
-                    <span style={{ fontSize: '9px', padding: '2px 7px', borderRadius: '4px', background: 'rgba(0,255,159,0.05)', border: '1px solid rgba(0,255,159,0.15)', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace', display: 'flex', alignItems: 'center', gap: '4px' }}><PodStatusIcon status="safe" />cilium</span>
-                  </>
-                )}
+                ))}
               </div>
             </div>
           )
@@ -363,24 +382,24 @@ export default function ThreatFeed() {
       </div>
 
       {selected && (
-        <div style={{ borderLeft: '1px solid rgba(0,255,159,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0d1117' }}>
+        <div key={selected.id} style={{ borderLeft: '1px solid rgba(0,255,159,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0d1117', animation: 'slideInRight 0.2s ease-out' }}>
           <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ fontSize: '11px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px' }}>Incident detail</span>
             <button onClick={() => setSelected(null)} style={{ fontSize: '12px', color: '#4a5568', background: 'transparent', border: 'none', cursor: 'pointer' }}>✕</button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px', fontFamily: 'Inter, sans-serif' }}>
-            <DetailSection title="Alert">
+            <DetailSection title="Alert" animationDelay="0.05s">
               <Row label="Rule" value={selected.rule} />
               <Row label="Priority" value={selected.priority} />
               <Row label="Severity" value={selected.severity} color={SEV_CONFIG[selected.severity]?.color} />
               <Row label="Hostname" value={selected.hostname} />
             </DetailSection>
-            <DetailSection title="Target">
+            <DetailSection title="Target" animationDelay="0.1s">
               <Row label="Pod" value={selected.pod || '— host level'} color={!selected.pod ? '#4a5568' : undefined} />
               <Row label="Namespace" value={selected.namespace || '— host level'} color={!selected.namespace ? '#4a5568' : undefined} />
               <Row label="MITRE" value={selected.mitre_tags?.join(', ') || 'none'} />
             </DetailSection>
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: '14px', animation: 'fadeInUp 0.2s ease-out both', animationDelay: '0.15s' }}>
               <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '10px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace' }}>AI Assessment</div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -428,21 +447,52 @@ export default function ThreatFeed() {
               </div>
               <style>{`@keyframes glowpulse{0%,100%{box-shadow:0 0 4px #00ff9f}50%{box-shadow:0 0 10px #00ff9f,0 0 20px rgba(0,255,159,0.3)}}`}</style>
             </div>
-            <DetailSection title="Response">
-              <Row label="Recommended" value={selected.recommended_action} />
-              <Row label="Action taken" value={selected.action_taken} color={ACTION_CONFIG[selected.action_taken]?.color} />
-              <Row label="Status" value={selected.action_status} />
-            </DetailSection>
-            <DetailSection title="Enrichment">
-              <Row label="Sources" value={selected.enrichment_sources?.join(', ') || 'none'} />
-              <Row label="Duration" value={`${selected.enrichment_duration_ms}ms`} />
-            </DetailSection>
+            <div style={{ marginBottom: '14px', animation: 'fadeInUp 0.2s ease-out both', animationDelay: '0.2s' }}>
+              <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace' }}>Response</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: `${(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color}11`, border: `1px solid ${(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color}33`, borderRadius: '7px' }}>
+                  <div>
+                    <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px', fontFamily: 'Inter, sans-serif' }}>Action taken</div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: (ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>{(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).label}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px', fontFamily: 'Inter, sans-serif' }}>Status</div>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: selected.action_status === 'completed' ? '#00ff9f' : selected.action_status === 'failed' ? '#ff2d55' : '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>● {selected.action_status}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '14px', animation: 'fadeInUp 0.2s ease-out both', animationDelay: '0.25s' }}>
+              <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace' }}>Enrichment</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+                {(['kubernetes', 'loki', 'hubble', 'kyverno', 'trivy'] as const).map(src => {
+                  const active = selected.enrichment_sources?.includes(src)
+                  return (
+                    <div key={src} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px', background: active ? 'rgba(0,255,159,0.04)' : 'rgba(255,255,255,0.02)', border: `1px solid ${active ? 'rgba(0,255,159,0.15)' : 'rgba(255,255,255,0.04)'}`, borderRadius: '5px' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: active ? '#00ff9f' : '#1f2937', border: `1px solid ${active ? 'rgba(0,255,159,0.5)' : 'rgba(255,255,255,0.1)'}`, flexShrink: 0, boxShadow: active ? '0 0 4px #00ff9f' : 'none' }} />
+                      <span style={{ fontSize: '10px', fontFamily: 'JetBrains Mono, monospace', color: active ? '#e6edf3' : '#374151', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{src}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '8px', fontFamily: 'JetBrains Mono, monospace', color: active ? '#00ff9f' : '#374151' }}>{active ? '✓ active' : '○ unavailable'}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', background: 'rgba(88,166,255,0.04)', border: '1px solid rgba(88,166,255,0.1)', borderRadius: '5px' }}>
+                <span style={{ fontSize: '9px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>Enrichment time</span>
+                <span style={{ marginLeft: 'auto', fontSize: '10px', fontWeight: 700, color: selected.enrichment_duration_ms > 3000 ? '#ff9f0a' : '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>{selected.enrichment_duration_ms}ms</span>
+                <div style={{ width: '60px', height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(100, (selected.enrichment_duration_ms / 5000) * 100)}%`, background: selected.enrichment_duration_ms > 3000 ? '#ff9f0a' : '#00ff9f', borderRadius: '2px' }} />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       <style>{`
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         ::-webkit-scrollbar { width: 2px; }
         ::-webkit-scrollbar-thumb { background: rgba(0,255,159,0.15); border-radius: 1px; }
       `}</style>
@@ -450,9 +500,9 @@ export default function ThreatFeed() {
   )
 }
 
-function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
+function DetailSection({ title, children, animationDelay }: { title: string; children: React.ReactNode; animationDelay?: string }) {
   return (
-    <div style={{ marginBottom: '14px' }}>
+    <div style={{ marginBottom: '14px', animation: 'fadeInUp 0.2s ease-out both', animationDelay }}>
       <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace', fontWeight: 500 }}>{title}</div>
       {children}
     </div>
