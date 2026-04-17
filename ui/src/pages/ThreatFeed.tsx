@@ -182,8 +182,8 @@ export default function ThreatFeed() {
               <Row label="Hostname" value={selected.hostname} />
             </DetailSection>
             <DetailSection title="Target">
-              <Row label="Pod" value={selected.pod || 'unknown'} />
-              <Row label="Namespace" value={selected.namespace || 'unknown'} />
+              <Row label="Pod" value={selected.pod || '— host level'} color={!selected.pod ? '#4a5568' : undefined} />
+              <Row label="Namespace" value={selected.namespace || '— host level'} color={!selected.namespace ? '#4a5568' : undefined} />
               <Row label="MITRE" value={selected.mitre_tags?.join(', ') || 'none'} />
             </DetailSection>
             <div style={{ marginBottom: '14px' }}>
