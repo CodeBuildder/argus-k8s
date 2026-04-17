@@ -40,7 +40,7 @@ export default function App() {
 
 function TopBar() {
   return (
-    <div className="flex items-center gap-4 px-6 h-[56px] bg-[#0a0f1e] border-b border-[rgba(99,179,237,0.12)] flex-shrink-0">
+    <div className="flex items-center gap-4 px-6 h-[56px] bg-[#0a0f1e] border-b border-[rgba(99,179,237,0.12)] flex-shrink-0" style={{ position: 'relative', zIndex: 50 }}>
       <div className="flex items-center gap-2">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
           <polygon points="12,2 22,20 2,20" fill="none" stroke="#00d4ff" strokeWidth="1.5"/>
