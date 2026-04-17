@@ -101,7 +101,7 @@ export default function ThreatFeed() {
           </span>
           {(['ALL','CRITICAL','HIGH','MED','LOW'] as const).map(s => (
             <button key={s} onClick={() => setFilter(s)} style={{
-              fontSize: '8px', padding: '2px 8px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700,
+              fontSize: '9px', padding: '3px 10px', borderRadius: '10px', cursor: 'pointer', fontWeight: 700,
               background: filter === s ? (SEV_CONFIG[s]?.bg || 'rgba(0,255,159,0.1)') : 'transparent',
               border: `1px solid ${filter === s ? (SEV_CONFIG[s]?.border || 'rgba(0,255,159,0.2)') : 'rgba(75,85,99,0.3)'}`,
               color: filter === s ? (SEV_CONFIG[s]?.color || '#00ff9f') : '#4a5568',
@@ -134,30 +134,30 @@ export default function ThreatFeed() {
               <div key={inc.id} onClick={() => setSelected(selected?.id === inc.id ? null : inc)}
                 style={{
                   borderRadius: '6px', border: `1px solid ${selected?.id === inc.id ? 'rgba(0,255,159,0.3)' : sev.border}`,
-                  background: selected?.id === inc.id ? '#1c2433' : '#161b22',
-                  padding: '9px 11px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  background: selected?.id === inc.id ? '#1c2433' : inc.severity === 'CRITICAL' ? 'rgba(255,45,85,0.05)' : '#1a2233',
+                  padding: '11px 14px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
                   transition: 'all 0.12s',
                   animation: isNew ? 'slideIn 0.3s ease-out' : undefined,
                 }}
               >
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: sev.dot, borderRadius: '3px 0 0 3px' }} />
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: sev.dot, borderRadius: '3px 0 0 3px' }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '8px', fontWeight: 700, padding: '2px 5px', borderRadius: '3px', background: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 700, padding: '3px 7px', borderRadius: '3px', background: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       ● {inc.severity}
                     </span>
-                    <span style={{ fontSize: '8px', color: `${act.color}`, background: `${act.color}22`, padding: '1px 5px', borderRadius: '3px', border: `1px solid ${act.color}44` }}>
+                    <span style={{ fontSize: '9px', color: `${act.color}`, background: `${act.color}22`, padding: '2px 7px', borderRadius: '3px', border: `1px solid ${act.color}44` }}>
                       {act.label}
                     </span>
                   </div>
-                  <span style={{ fontSize: '8px', color: '#4a5568' }}>{fmt(inc.ts)} · {inc.hostname}</span>
+                  <span style={{ fontSize: '9px', color: '#6b7280' }}>{fmt(inc.ts)} · {inc.hostname}</span>
                 </div>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#e6edf3', marginBottom: '3px', lineHeight: 1.3 }}>{inc.rule}</div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff', marginBottom: '3px', lineHeight: 1.3 }}>{inc.rule}</div>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  {inc.namespace && <span style={{ fontSize: '8px', color: 'rgba(88,166,255,0.8)', background: 'rgba(88,166,255,0.08)', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(88,166,255,0.2)' }}>{inc.namespace}</span>}
-                  {inc.pod && <span style={{ fontSize: '8px', color: '#4a5568', background: '#0d1117', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(0,255,159,0.08)' }}>{inc.pod}</span>}
-                  {inc.mitre_tags?.map(t => <span key={t} style={{ fontSize: '8px', color: 'rgba(188,140,255,0.8)', background: 'rgba(188,140,255,0.06)', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(188,140,255,0.2)' }}>{t}</span>)}
-                  <span style={{ fontSize: '8px', color: '#4a5568', marginLeft: 'auto' }}>
+                  {inc.namespace && <span style={{ fontSize: '9px', color: 'rgba(88,166,255,0.8)', background: 'rgba(88,166,255,0.08)', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(88,166,255,0.2)' }}>{inc.namespace}</span>}
+                  {inc.pod && <span style={{ fontSize: '9px', color: '#4a5568', background: '#0d1117', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(0,255,159,0.08)' }}>{inc.pod}</span>}
+                  {inc.mitre_tags?.map(t => <span key={t} style={{ fontSize: '9px', color: 'rgba(188,140,255,0.8)', background: 'rgba(188,140,255,0.06)', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(188,140,255,0.2)' }}>{t}</span>)}
+                  <span style={{ fontSize: '9px', color: '#4a5568', marginLeft: 'auto' }}>
                     {Math.round(inc.confidence * 100)}% confidence
                   </span>
                 </div>
@@ -218,7 +218,7 @@ export default function ThreatFeed() {
 function DetailSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: '14px' }}>
-      <div style={{ fontSize: '8px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)' }}>{title}</div>
+      <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)' }}>{title}</div>
       {children}
     </div>
   )
@@ -227,8 +227,8 @@ function DetailSection({ title, children }: { title: string; children: React.Rea
 function Row({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '2px 0', gap: '8px' }}>
-      <span style={{ fontSize: '9px', color: '#4a5568', flexShrink: 0 }}>{label}</span>
-      <span style={{ fontSize: '9px', color: color || '#8b949e', textAlign: 'right', wordBreak: 'break-all' }}>{value}</span>
+      <span style={{ fontSize: '10px', color: '#4a5568', flexShrink: 0 }}>{label}</span>
+      <span style={{ fontSize: '10px', color: color || '#8b949e', textAlign: 'right', wordBreak: 'break-all' }}>{value}</span>
     </div>
   )
 }
