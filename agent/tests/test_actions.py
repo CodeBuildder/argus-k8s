@@ -100,10 +100,9 @@ class TestActionIsolate:
 
     async def test_isolate_applies_policy(self):
         decision = make_decision()
-        with patch("actions._apply_policy_sync", new=lambda p, n, policy: None):
-            with patch("asyncio.get_event_loop") as mock_loop:
-                mock_loop.return_value.run_in_executor = AsyncMock(return_value=None)
-                result = await action_isolate(SAMPLE_ALERT, decision)
+        with patch("asyncio.get_event_loop") as mock_loop:
+            mock_loop.return_value.run_in_executor = AsyncMock(return_value=None)
+            result = await action_isolate(SAMPLE_ALERT, decision)
         assert result["action"] == "ISOLATE"
 
     async def test_isolate_k8s_error_returns_failed(self):
