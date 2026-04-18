@@ -62,19 +62,23 @@ const MOCK_INCIDENTS: Incident[] = [
   { id: 'm10', ts: Date.now()/1000-650, rule: 'K8s Service Account Token Mount',            severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.73 },
 ]
 
+// 10 threats, one per layer pair — spread so each segment of the pipeline lights up
 const MOCK_POOL: Omit<Incident, 'id' | 'ts'>[] = [
+  // L1 Falco runtime (exec/process rules → segment 0-1)
   { rule: 'Shell Spawned in Container',             severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.93 },
-  { rule: 'Outbound C2 Callback Detected',          severity: 'CRITICAL', namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.89 },
-  { rule: 'Sensitive File Read — /etc/passwd',      severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.76 },
-  { rule: 'Kyverno: Privileged Pod Rejected',       severity: 'MED',      namespace: 'kube-system', hostname: 'k3s-worker1', action_taken: 'LOG',            confidence: 0.62 },
   { rule: 'Privilege Escalation via SUID Binary',   severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker2', action_taken: 'HUMAN_REQUIRED', confidence: 0.68 },
+  // L2 Kyverno admission (policy/registry rules → segment 1-2)
+  { rule: 'Kyverno: Privileged Pod Rejected',       severity: 'MED',      namespace: 'kube-system', hostname: 'k3s-worker1', action_taken: 'LOG',            confidence: 0.62 },
+  { rule: 'Kyverno: Disallowed Image Registry',     severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-master',  action_taken: 'HUMAN_REQUIRED', confidence: 0.77 },
+  // L3 Cilium network (network/DNS/egress rules → segment 2-3)
+  { rule: 'Outbound C2 Callback Detected',          severity: 'CRITICAL', namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.89 },
   { rule: 'Unexpected DNS Lookup (data.exfil.io)',  severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'NOTIFY',         confidence: 0.81 },
-  { rule: 'Cilium L7 Policy Violation',             severity: 'MED',      namespace: 'monitoring',  hostname: 'k3s-master',  action_taken: 'LOG',            confidence: 0.54 },
-  { rule: 'Write to Container Root Filesystem',     severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.85 },
-  { rule: 'Crypto Miner Process Detected',          severity: 'CRITICAL', namespace: 'default',     hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.97 },
-  { rule: 'K8s Secret Accessed via API',            severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.74 },
   { rule: 'Network Port Scan from Pod',             severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.79 },
-  { rule: 'Proc Mount Inside Container',            severity: 'MED',      namespace: 'kube-system', hostname: 'k3s-worker1', action_taken: 'LOG',            confidence: 0.60 },
+  // L4 AI enrichment (all severities flow through → segment 3-4)
+  { rule: 'Crypto Miner Process Detected',          severity: 'CRITICAL', namespace: 'default',     hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.97 },
+  { rule: 'Sensitive File Read — /etc/shadow',      severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.76 },
+  // L5 Action router (post-AI decision)
+  { rule: 'K8s Secret Accessed via API Server',     severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.74 },
 ]
 
 type NotifyChannel = { id: 'slack' | 'pagerduty' | 'email'; color: string }
@@ -544,14 +548,14 @@ export default function CommandCenter() {
     return () => clearInterval(t)
   }, [])
 
-  // Demo mode: inject a varied mock incident every 7s
+  // Demo mode: cycle through all 10 threats, one every 30s, then loop
   useEffect(() => {
     if (liveConnected) return
     mockTimer.current = setInterval(() => {
       const tpl = MOCK_POOL[mockPoolIndex.current % MOCK_POOL.length]
       mockPoolIndex.current++
-      setIncidents(prev => [{ ...tpl, id: `live-${Date.now()}`, ts: Date.now() / 1000 }, ...prev].slice(0, 30))
-    }, 7000)
+      setIncidents(prev => [{ ...tpl, id: `live-${Date.now()}`, ts: Date.now() / 1000 }, ...prev].slice(0, 50))
+    }, 30000)
     return () => { if (mockTimer.current) clearInterval(mockTimer.current) }
   }, [liveConnected])
 
