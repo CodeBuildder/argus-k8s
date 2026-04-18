@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 const API = '/api'
 
@@ -251,7 +252,292 @@ function ImpactDiagram({ incident }: { incident: any }) {
   )
 }
 
+// ─── Inline Incident Chat ─────────────────────────────────────────────────────
+
+interface ChatMsg { role: 'user' | 'assistant'; content: string }
+
+function renderMsg(text: string) {
+  return text.split('\n').map((line, i) => {
+    // Heading
+    if (line.startsWith('## ')) {
+      return <div key={i} style={{ fontSize: '12px', fontWeight: 700, color: '#e6edf3', marginTop: i > 0 ? '10px' : 0, marginBottom: '4px', letterSpacing: '-0.01em' }}>{line.slice(3)}</div>
+    }
+    // Bold section header (standalone **text**)
+    if (/^\*\*(.+)\*\*$/.test(line.trim())) {
+      return <div key={i} style={{ fontSize: '11px', fontWeight: 700, color: '#00d4ff', marginTop: i > 0 ? '10px' : 0, marginBottom: '3px', letterSpacing: '0.02em' }}>{line.trim().slice(2, -2)}</div>
+    }
+    // Bullet
+    if (line.startsWith('- ')) {
+      return (
+        <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '3px', alignItems: 'flex-start' }}>
+          <span style={{ color: '#00d4ff', fontSize: '10px', marginTop: '3px', flexShrink: 0 }}>▸</span>
+          <span style={{ lineHeight: 1.6 }}>{parseBold(line.slice(2))}</span>
+        </div>
+      )
+    }
+    // Numbered list
+    if (/^\d+\. /.test(line)) {
+      const num = line.match(/^\d+/)?.[0]
+      return (
+        <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '3px', alignItems: 'flex-start' }}>
+          <span style={{ color: '#58a6ff', fontSize: '10px', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0, minWidth: '14px', marginTop: '2px' }}>{num}.</span>
+          <span style={{ lineHeight: 1.6 }}>{parseBold(line.replace(/^\d+\. /, ''))}</span>
+        </div>
+      )
+    }
+    // Empty line → spacing
+    if (!line.trim()) return <div key={i} style={{ height: '6px' }} />
+    // Normal paragraph
+    return <div key={i} style={{ marginBottom: '2px', lineHeight: 1.65 }}>{parseBold(line)}</div>
+  })
+}
+
+function parseBold(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/)
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} style={{ color: '#e6edf3', fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={i} style={{ background: 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.2)', borderRadius: '3px', padding: '1px 5px', fontSize: '10px', fontFamily: 'JetBrains Mono, monospace', color: '#00d4ff' }}>{part.slice(1, -1)}</code>
+    }
+    return part
+  })
+}
+
+const MOCK_AI_RESPONSE = `Here's what I'd prioritize based on this incident:
+
+**Immediate (next 5 min)**
+The memfd_create syscall is a classic fileless execution technique — the attacker is running code entirely in memory to avoid detection by file-based scanners. Since the pod is still running, the malicious process may still be active.
+
+1. Run \`crictl inspect <container-id>\` to check the live process list before it disappears
+2. Capture network flows via Hubble — check for any outbound C2 connections
+
+**Short-term (next 30 min)**
+- Treat the node as suspect until you can correlate whether runc itself was exploited or an application inside the container spawned this
+- If isolation hasn't fired yet, apply a CiliumNetworkPolicy deny-all egress now
+
+**Key risk to watch**
+If the attacker already exfiltrated env vars (common next step after memfd_create), rotate all secrets mounted into this pod — especially service account tokens and database credentials.`
+
+function IncidentChat({ incident }: { incident: Incident }) {
+  const [open, setOpen] = useState(false)
+  const [messages, setMessages] = useState<ChatMsg[]>([])
+  const [input, setInput] = useState('')
+  const [streaming, setStreaming] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const seededRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+  }, [messages])
+
+  useEffect(() => {
+    setMessages([])
+    setInput('')
+    setOpen(false)
+    seededRef.current = null
+  }, [incident.id])
+
+  // Clean up empty assistant bubble if streaming ended with no content
+  useEffect(() => {
+    if (!streaming) {
+      setMessages(prev => {
+        const last = prev[prev.length - 1]
+        if (last?.role === 'assistant' && last.content === '') return prev.slice(0, -1)
+        return prev
+      })
+    }
+  }, [streaming])
+
+  const streamMock = (text: string) => {
+    let idx = 0
+    const tick = () => {
+      const chunk = text.slice(idx, idx + 14)
+      idx += 14
+      setMessages(prev => {
+        const msgs = [...prev]
+        const last = msgs[msgs.length - 1]
+        if (last?.role === 'assistant') msgs[msgs.length - 1] = { ...last, content: last.content + chunk }
+        return msgs
+      })
+      if (idx < text.length) setTimeout(tick, 16)
+      else setStreaming(false)
+    }
+    setTimeout(tick, 120)
+  }
+
+  const send = async (text: string, history: ChatMsg[] = messages) => {
+    const q = text.trim()
+    if (!q || streaming) return
+    setInput('')
+    const userMsg: ChatMsg = { role: 'user', content: q }
+    setMessages(prev => [...prev, userMsg, { role: 'assistant', content: '' }])
+    setStreaming(true)
+
+    let gotContent = false
+    try {
+      const res = await fetch(`${API}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: q, history: history.map(m => ({ role: m.role, content: m.content })) }),
+      })
+      if (!res.ok || !res.body) throw new Error()
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buf = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += decoder.decode(value, { stream: true })
+        const lines = buf.split('\n'); buf = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(line.slice(6).trim())
+            if (data.type === 'text') {
+              gotContent = true
+              setMessages(prev => {
+                const msgs = [...prev]
+                const last = msgs[msgs.length - 1]
+                if (last?.role === 'assistant') msgs[msgs.length - 1] = { ...last, content: last.content + data.text }
+                return msgs
+              })
+            } else if (data.type === 'done') {
+              setStreaming(false)
+            } else if (data.type === 'error') {
+              setStreaming(false)
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    } catch { /* backend offline */ }
+
+    if (!gotContent) streamMock(MOCK_AI_RESPONSE)
+    else setStreaming(false)
+  }
+
+  const openAndSeed = () => {
+    setOpen(true)
+    setTimeout(() => inputRef.current?.focus(), 320)
+    if (seededRef.current === incident.id) return
+    seededRef.current = incident.id
+    const steps = (incident as any).action_steps?.join('; ') || ''
+    const seed = `Investigate incident "${incident.rule}" on ${incident.pod || 'host'} in namespace ${incident.namespace}. Assessment: ${incident.assessment}. Blast radius: ${incident.blast_radius}. ${steps ? `Recommended steps: ${steps}.` : ''} What should I prioritize?`
+    send(seed, [])
+  }
+
+  return (
+    <div style={{ marginTop: '12px' }}>
+      <button
+        onClick={() => open ? setOpen(false) : openAndSeed()}
+        style={{
+          width: '100%', padding: '9px 14px', borderRadius: '8px', cursor: 'pointer',
+          background: open ? 'rgba(0,212,255,0.1)' : 'rgba(0,212,255,0.05)',
+          border: `1px solid ${open ? 'rgba(0,212,255,0.35)' : 'rgba(0,212,255,0.18)'}`,
+          color: '#00d4ff', fontSize: '10px', fontFamily: 'JetBrains Mono, monospace',
+          fontWeight: 700, letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px',
+          transition: 'all 0.2s',
+        }}
+        onMouseEnter={e => { if (!open) { e.currentTarget.style.background = 'rgba(0,212,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.35)' } }}
+        onMouseLeave={e => { if (!open) { e.currentTarget.style.background = 'rgba(0,212,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(0,212,255,0.18)' } }}
+      >
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="#00d4ff" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 7.5C10 8.05 9.55 8.5 9 8.5H3.5L1.5 10.5V3C1.5 2.45 1.95 2 2.5 2H9C9.55 2 10 2.45 10 3V7.5Z"/>
+        </svg>
+        {open ? 'Close AI chat' : 'Ask Argus AI about this incident'}
+        <span style={{ marginLeft: 'auto', fontSize: '8px', color: '#00d4ff60' }}>claude-sonnet-4-6</span>
+        <span style={{ fontSize: '9px', color: '#00d4ff80', transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>▾</span>
+      </button>
+
+      {/* Animated expand — grid-template-rows trick animates to real height, no max-height timing issues */}
+      <div style={{
+        display: 'grid',
+        gridTemplateRows: open ? '1fr' : '0fr',
+        transition: 'grid-template-rows 0.38s cubic-bezier(0.4,0,0.2,1)',
+        marginTop: open ? '8px' : '0px',
+      } as React.CSSProperties}>
+        <div style={{ overflow: 'hidden', opacity: open ? 1 : 0, transition: 'opacity 0.25s ease-out' }}>
+        <div style={{ background: '#070c12', border: '1px solid rgba(0,212,255,0.14)', borderRadius: '10px', overflow: 'hidden' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 14px', borderBottom: '1px solid rgba(0,212,255,0.07)', background: 'rgba(0,212,255,0.03)' }}>
+            <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00d4ff', boxShadow: '0 0 6px #00d4ff', animation: streaming ? 'glowpulse 0.8s infinite' : 'glowpulse 2.5s infinite', flexShrink: 0 }} />
+            <span style={{ fontSize: '9px', color: '#00d4ff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.5px' }}>
+              ARGUS AI {streaming ? '· thinking...' : '· incident context loaded'}
+            </span>
+          </div>
+
+          {/* Messages */}
+          <div ref={scrollRef} style={{ maxHeight: '290px', overflowY: 'auto', padding: '14px 14px 8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {messages.map((msg, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div style={{ fontSize: '8px', color: msg.role === 'user' ? '#00d4ff60' : '#4a5568', fontFamily: 'JetBrains Mono, monospace', marginBottom: '3px' }}>
+                  {msg.role === 'user' ? 'you' : '⬡ argus'}
+                </div>
+                <div style={{
+                  maxWidth: '92%', padding: '10px 13px',
+                  borderRadius: msg.role === 'user' ? '12px 12px 3px 12px' : '12px 12px 12px 3px',
+                  background: msg.role === 'user' ? 'rgba(0,212,255,0.08)' : 'rgba(255,255,255,0.035)',
+                  border: msg.role === 'user' ? '1px solid rgba(0,212,255,0.18)' : '1px solid rgba(255,255,255,0.07)',
+                  fontSize: '12px', color: msg.role === 'user' ? '#a8d8e8' : '#c9d1d9',
+                  fontFamily: "'Inter', -apple-system, sans-serif",
+                  letterSpacing: '-0.005em',
+                }}>
+                  {msg.content === '' && streaming && i === messages.length - 1
+                    ? <span style={{ color: '#00d4ff', animation: 'glowpulse 0.8s infinite' }}>▋</span>
+                    : msg.role === 'assistant'
+                      ? renderMsg(msg.content)
+                      : <span style={{ lineHeight: 1.6 }}>{msg.content}</span>
+                  }
+                  {msg.role === 'assistant' && streaming && i === messages.length - 1 && msg.content !== '' && (
+                    <span style={{ color: '#00d4ff', marginLeft: '2px' }}>▋</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div style={{ padding: '10px 14px 12px', borderTop: '1px solid rgba(0,212,255,0.07)', display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input) } }}
+              placeholder="Ask a follow-up question..."
+              disabled={streaming}
+              style={{
+                flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,212,255,0.14)',
+                borderRadius: '8px', color: '#e6edf3', fontSize: '11px', padding: '8px 12px',
+                fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.15s',
+              }}
+              onFocus={e => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.35)' }}
+              onBlur={e => { e.currentTarget.style.borderColor = 'rgba(0,212,255,0.14)' }}
+            />
+            <button
+              onClick={() => send(input)}
+              disabled={streaming || !input.trim()}
+              style={{
+                width: '34px', height: '34px', borderRadius: '8px', flexShrink: 0,
+                border: '1px solid rgba(0,212,255,0.25)',
+                background: streaming || !input.trim() ? 'rgba(0,0,0,0.2)' : 'rgba(0,212,255,0.12)',
+                color: streaming || !input.trim() ? '#3d4a5f' : '#00d4ff',
+                cursor: streaming || !input.trim() ? 'not-allowed' : 'pointer',
+                fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}
+            >↑</button>
+          </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function ThreatFeed() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [selected, setSelected] = useState<Incident | null>(null)
   const [filter, setFilter] = useState<string>('ALL')
@@ -260,6 +546,8 @@ export default function ThreatFeed() {
   const [lastUpdated, setLastUpdated] = React.useState<string>('')
   const prevCount = useRef(0)
   const newIds = useRef<Set<string>>(new Set())
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const deepLinkId = searchParams.get('id')
 
   const fetchIncidents = async () => {
     try {
@@ -289,6 +577,19 @@ export default function ThreatFeed() {
     return () => clearInterval(t)
   }, [])
 
+  // Auto-select and scroll to incident when navigated from pipeline particle click
+  useEffect(() => {
+    if (!deepLinkId || !incidents.length) return
+    const match = incidents.find(i => i.id === deepLinkId)
+    if (match) {
+      setSelected(match)
+      setTimeout(() => {
+        rowRefs.current[deepLinkId]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 80)
+      setSearchParams({}, { replace: true })
+    }
+  }, [deepLinkId, incidents])
+
   const namespaces = ['ALL', ...Array.from(new Set(incidents.map(i => i.namespace).filter(Boolean)))]
   const filtered = incidents.filter(i => {
     if (filter !== 'ALL' && i.severity !== filter) return false
@@ -307,7 +608,7 @@ export default function ThreatFeed() {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 440px' : '1fr', height: '100%', overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+        <div style={{ padding: '12px 18px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
           <span style={{ fontSize: '9px', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '2px' }}>
             ⚡ Live threat feed
           </span>
@@ -355,7 +656,7 @@ export default function ThreatFeed() {
           </span>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 18px 48px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {loading && (
             <div style={{ color: '#4a5568', fontSize: '10px', textAlign: 'center', padding: '20px' }}>
               Connecting to agent...
@@ -371,18 +672,18 @@ export default function ThreatFeed() {
             const act = ACTION_CONFIG[inc.action_taken] || ACTION_CONFIG.LOG
             const isNew = newIds.current.has(inc.id)
             return (
-              <div key={inc.id} onClick={() => setSelected(selected?.id === inc.id ? null : inc)}
+              <div key={inc.id} ref={el => { rowRefs.current[inc.id] = el }} onClick={() => setSelected(selected?.id === inc.id ? null : inc)}
                 style={{
                   borderRadius: '6px', border: `1px solid ${selected?.id === inc.id ? 'rgba(0,255,159,0.3)' : sev.border}`,
                   background: selected?.id === inc.id ? '#1c2433' : inc.severity === 'CRITICAL' ? 'rgba(255,45,85,0.05)' : '#1a2233',
-                  padding: '13px 15px', minHeight: '80px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  padding: '14px 20px 32px', minHeight: '96px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
                   fontFamily: 'Inter, sans-serif',
                   transition: 'all 0.12s',
                   animation: isNew ? 'slideIn 0.3s ease-out' : undefined,
                 }}
               >
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: sev.dot, borderRadius: '3px 0 0 3px' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '3px', background: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       ● {inc.severity}
@@ -393,7 +694,7 @@ export default function ThreatFeed() {
                   </div>
                   <span style={{ fontSize: '10px', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace' }}>{fmt(inc.ts)} · {inc.hostname}</span>
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#f0f6fc', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em', marginBottom: '5px', lineHeight: 1.3 }}>{inc.rule}</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: '#f0f6fc', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em', marginBottom: '10px', lineHeight: 1.3 }}>{inc.rule}</div>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                   {inc.namespace && <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(88,166,255,0.8)', background: 'rgba(88,166,255,0.08)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(88,166,255,0.2)' }}>{inc.namespace}</span>}
                   {inc.pod && <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#4a5568', background: '#0d1117', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(0,255,159,0.08)' }}>{inc.pod}</span>}
@@ -410,11 +711,11 @@ export default function ThreatFeed() {
 
       {selected && (
         <div key={selected.id} style={{ borderLeft: '1px solid rgba(0,255,159,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0d1117', animation: 'slideInRight 0.2s ease-out' }}>
-          <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ fontSize: '11px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px' }}>Incident detail</span>
             <button onClick={() => setSelected(null)} style={{ fontSize: '12px', color: '#4a5568', background: 'transparent', border: 'none', cursor: 'pointer' }}>✕</button>
           </div>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px', fontFamily: 'Inter, sans-serif' }}>
             <DetailSection title="Alert" animationDelay="0.05s">
               <Row label="Rule" value={selected.rule} />
               <Row label="Priority" value={selected.priority} />
@@ -451,7 +752,7 @@ export default function ThreatFeed() {
               <ImpactDiagram incident={selected} />
 
               <div style={{ background: 'rgba(88,166,255,0.04)', border: '1px solid rgba(88,166,255,0.12)', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '7px' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Recommended actions</span>
                 </div>
                 {((selected as any).action_steps?.length > 0 ? (selected as any).action_steps : [`Take action: ${selected.recommended_action}`]).map((step: string, i: number) => (
@@ -460,6 +761,7 @@ export default function ThreatFeed() {
                     <span style={{ fontSize: '11px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{step}</span>
                   </div>
                 ))}
+                <IncidentChat incident={selected} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>

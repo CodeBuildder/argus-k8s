@@ -15,6 +15,7 @@ Safety rules:
 import asyncio
 import json
 import re
+import time
 from datetime import datetime, timezone
 from typing import Any
 import httpx
@@ -27,6 +28,10 @@ KILL_CONFIDENCE_THRESHOLD = 0.85
 # In-memory approval queue for HUMAN_REQUIRED actions
 # In production this would be persisted to a database
 approval_queue: list[dict] = []
+
+# Suppression registry: "namespace/pod/rule" -> expiry unix timestamp
+# Populated when a human rejects an approval; prevents re-queuing the same event
+suppression_list: dict[str, float] = {}
 
 
 async def action_log(alert: dict, decision: Any) -> dict:
@@ -230,10 +235,25 @@ async def action_human_required(alert: dict, decision: Any) -> dict:
 
     The approval queue is exposed via the API so the UI can display
     pending approvals. The agent does NOT auto-remediate until approved.
+    Respects suppression windows set by previous human rejections.
     """
     fields = alert.get("fields", {})
     pod_name = fields.get("k8s_pod_name", "unknown")
     namespace = fields.get("k8s_ns_name", "unknown")
+
+    # Check suppression — don't re-queue if a human recently rejected this combo
+    suppression_key = f"{namespace}/{pod_name}/{alert.get('rule', '')}"
+    expiry = suppression_list.get(suppression_key, 0)
+    if expiry > time.time():
+        expires_in = int(expiry - time.time())
+        log.info("human_required_suppressed", key=suppression_key, expires_in_seconds=expires_in)
+        return {
+            "action": "HUMAN_REQUIRED",
+            "status": "suppressed",
+            "suppressed_key": suppression_key,
+            "expires_in_seconds": expires_in,
+            "message": f"Suppressed by previous human rejection. Auto-resumes in {expires_in}s.",
+        }
 
     queue_entry = {
         "id": f"{int(datetime.now(timezone.utc).timestamp())}-{pod_name}",

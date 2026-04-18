@@ -12,9 +12,9 @@ import os
 import structlog
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from webhook import router as webhook_router
 
@@ -65,29 +65,105 @@ async def get_approval_queue():
     from actions import approval_queue
     return {
         "pending": [a for a in approval_queue if a["status"] == "pending"],
+        "resolved": [a for a in approval_queue if a["status"] != "pending"][-50:],
         "total": len(approval_queue),
     }
 
 
+@app.get("/approvals/suppressed")
+async def get_suppressed():
+    from actions import suppression_list
+    now = time.time()
+    active = {k: v for k, v in suppression_list.items() if v > now}
+    return {
+        "suppressed": [
+            {
+                "key": k,
+                "expires_in_seconds": int(v - now),
+                "expires_at": datetime.fromtimestamp(v, tz=timezone.utc).isoformat(),
+            }
+            for k, v in active.items()
+        ]
+    }
+
+
+async def _execute_approved_action(entry: dict) -> None:
+    """Execute the queued action after a human clicks Approve."""
+    from types import SimpleNamespace
+    from actions import action_kill, action_isolate, action_notify, action_log
+
+    decision_data = entry["decision"]
+    alert = entry["alert"]
+    action = decision_data["recommended_action"]
+
+    # confidence = 1.0 so KILL threshold is always satisfied on human override
+    decision = SimpleNamespace(
+        severity=SimpleNamespace(value=decision_data["severity"]),
+        confidence=1.0,
+        assessment=decision_data["assessment"],
+        recommended_action=SimpleNamespace(value=action),
+        likely_false_positive=False,
+    )
+
+    try:
+        if action == "KILL":
+            result = await action_kill(alert, decision)
+        elif action == "ISOLATE":
+            result = await action_isolate(alert, decision)
+        elif action == "NOTIFY":
+            result = await action_notify(alert, decision, os.getenv("SLACK_WEBHOOK_URL") or None)
+        else:
+            result = await action_log(alert, decision)
+
+        entry["execution_result"] = result
+        log.info("approved_action_executed", queue_id=entry["id"], action=action, status=result.get("status"))
+    except Exception as e:
+        log.error("approved_action_failed", queue_id=entry["id"], error=str(e))
+        entry["execution_result"] = {"status": "failed", "error": str(e)}
+
+
 @app.post("/approvals/{queue_id}/approve")
-async def approve_action(queue_id: str):
+async def approve_action(queue_id: str, background_tasks: BackgroundTasks):
     from actions import approval_queue
     for entry in approval_queue:
-        if entry["id"] == queue_id:
+        if entry["id"] == queue_id and entry["status"] == "pending":
             entry["status"] = "approved"
+            entry["resolved_at"] = datetime.now(timezone.utc).isoformat()
             log.info("human_approved", queue_id=queue_id)
+            background_tasks.add_task(_execute_approved_action, entry)
             return {"status": "approved", "queue_id": queue_id}
     raise HTTPException(status_code=404, detail="Queue entry not found")
 
 
 @app.post("/approvals/{queue_id}/reject")
-async def reject_action(queue_id: str):
-    from actions import approval_queue
+async def reject_action(queue_id: str, request: Request):
+    from actions import approval_queue, suppression_list
+
+    try:
+        body = await request.json()
+        reason = body.get("reason", "")
+        suppress_minutes = int(body.get("suppress_minutes", 30))
+    except Exception:
+        reason = ""
+        suppress_minutes = 30
+
     for entry in approval_queue:
-        if entry["id"] == queue_id:
+        if entry["id"] == queue_id and entry["status"] == "pending":
             entry["status"] = "rejected"
-            log.info("human_rejected", queue_id=queue_id)
-            return {"status": "rejected", "queue_id": queue_id}
+            entry["rejected_reason"] = reason
+            entry["resolved_at"] = datetime.now(timezone.utc).isoformat()
+
+            suppress_key = f"{entry['namespace']}/{entry['pod']}/{entry['alert'].get('rule', '')}"
+            suppression_list[suppress_key] = time.time() + (suppress_minutes * 60)
+
+            log.info("human_rejected", queue_id=queue_id, reason=reason,
+                     suppressed_key=suppress_key, suppress_minutes=suppress_minutes)
+            return {
+                "status": "rejected",
+                "queue_id": queue_id,
+                "suppressed_key": suppress_key,
+                "suppressed_minutes": suppress_minutes,
+            }
     raise HTTPException(status_code=404, detail="Queue entry not found")
 
 
@@ -213,6 +289,104 @@ Provide a concise, actionable summary for security operators."""
     except Exception as e:
         log.error("incident_summary_failed", error=str(e))
         return {"error": f"Failed to generate summary: {str(e)}"}
+
+@app.post("/chat")
+async def chat_with_agent(request: Request):
+    """
+    Conversational AI interface grounded in real cluster state.
+    Streams Claude responses token-by-token via SSE.
+    """
+    from anthropic import AsyncAnthropic
+    from actions import approval_queue
+
+    body = await request.json()
+    message = body.get("message", "")
+    history = body.get("history", [])  # [{role, content}]
+
+    if not message:
+        return JSONResponse({"error": "message is required"}, status_code=400)
+
+    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+
+    # Build cluster context snapshot
+    from actions import approval_queue as aq
+    pending = [a for a in aq if a["status"] == "pending"]
+    recent = list(reversed(incident_store[-20:]))
+    chains_data: list = []
+    try:
+        from attack_chain import attack_chains
+        chains_data = attack_chains[-5:]
+    except Exception:
+        pass
+
+    incident_rows = [
+        {k: v for k, v in inc.items() if k in ("rule", "severity", "namespace", "pod", "action_taken", "assessment", "ts")}
+        for inc in recent
+    ]
+
+    system_prompt = f"""You are Argus, an AI-powered Kubernetes security assistant. \
+Answer questions about the cluster's security posture using the live data below.
+
+## Live Cluster State ({datetime.now(timezone.utc).strftime('%H:%M UTC')})
+
+**Recent incidents (last {len(recent)}):**
+{json.dumps(incident_rows, indent=2)}
+
+**Pending human approvals:** {len(pending)}
+{json.dumps([{{k: v for k, v in a.items() if k in ("id", "pod", "namespace", "decision")}} for a in pending], indent=2)}
+
+**Active attack chains:** {len(chains_data)}
+
+## Instructions
+- Be concise and precise — operators are under time pressure
+- Cite specific pod names, namespaces, and incident rules when relevant
+- If asked about something not in the data, say so clearly
+- Suggest concrete next steps when appropriate
+- Format lists with bullet points for readability"""
+
+    messages = [{"role": m["role"], "content": m["content"]} for m in history[-20:]]
+    messages.append({"role": "user", "content": message})
+
+    if not api_key:
+        # Demo mode — stream a canned response
+        async def demo_stream():
+            demo = (
+                "I'm running in **demo mode** — no `ANTHROPIC_API_KEY` configured. "
+                "In production I analyse your real cluster telemetry: Falco alerts, "
+                "Hubble network flows, Kyverno violations, CVE hits, and pending approvals, "
+                "then answer your questions grounded in that live data."
+            )
+            for word in demo.split():
+                yield f"data: {json.dumps({'type': 'text', 'text': word + ' '})}\n\n"
+                await asyncio.sleep(0.04)
+            yield f"data: {json.dumps({'type': 'done', 'usage': {'input': 0, 'output': 0}})}\n\n"
+        return StreamingResponse(demo_stream(), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+    client = AsyncAnthropic(api_key=api_key)
+
+    async def stream_response():
+        try:
+            async with client.messages.stream(
+                model="claude-sonnet-4-6",
+                max_tokens=1200,
+                system=system_prompt,
+                messages=messages,
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield f"data: {json.dumps({'type': 'text', 'text': text})}\n\n"
+                final = await stream.get_final_message()
+                yield f"data: {json.dumps({'type': 'done', 'usage': {'input': final.usage.input_tokens, 'output': final.usage.output_tokens}})}\n\n"
+        except Exception as e:
+            log.error("chat_stream_failed", error=str(e))
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        stream_response(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
 
 @app.post("/threat-hunt")
 async def threat_hunt(request: Request):
