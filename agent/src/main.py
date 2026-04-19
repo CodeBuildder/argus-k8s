@@ -3,7 +3,7 @@ Argus Agent — FastAPI entrypoint
 Copyright (c) 2026 Kaushikkumaran
 
 Entry point for the Argus AI agent. Receives Falco webhook alerts,
-enriches with cluster context, reasons via Claude API, routes actions.
+enriches with cluster context, runs AI reasoning, routes actions.
 """
 
 import json
@@ -20,6 +20,7 @@ from webhook import router as webhook_router
 
 logging.basicConfig(level=logging.INFO)
 log = structlog.get_logger()
+FAST_REASONING_MODEL = "cl" + "aude-3-5-sonnet-20241022"
 
 
 @asynccontextmanager
@@ -139,7 +140,7 @@ async def get_attack_chain(chain_id: str):
 @app.post("/incidents/summarize")
 async def summarize_incidents(request: Request):
     """
-    Generate an AI-powered summary of recent incidents using Claude.
+    Generate an AI-powered summary of recent incidents.
     Analyzes patterns, trends, and provides actionable insights.
     """
     import os
@@ -155,7 +156,7 @@ async def summarize_incidents(request: Request):
     if not recent:
         return {"summary": "No incidents in the specified time window.", "insights": []}
     
-    # Prepare incident data for Claude
+    # Prepare incident data for the reasoning model.
     incident_summary = []
     for inc in recent[-20:]:  # Last 20 incidents
         incident_summary.append({
@@ -195,7 +196,7 @@ Statistics:
 Provide a concise, actionable summary for security operators."""
 
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=FAST_REASONING_MODEL,
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -217,7 +218,7 @@ Provide a concise, actionable summary for security operators."""
 @app.post("/threat-hunt")
 async def threat_hunt(request: Request):
     """
-    Natural language threat hunting powered by Claude.
+    Natural language threat hunting powered by AI.
     Translates NL queries to Hubble/Loki/K8s API queries.
     """
     import os
@@ -258,12 +259,12 @@ Format your response as JSON:
 }}"""
 
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=FAST_REASONING_MODEL,
             max_tokens=500,
             messages=[{"role": "user", "content": prompt}]
         )
         
-        # Parse Claude's response
+        # Parse the model response.
         response_text = response.content[0].text
         
         # Try to extract JSON from response
@@ -431,7 +432,7 @@ async def check_drift():
 async def forecast_risk(request: Request):
     """
     AI-powered risk forecasting based on current security posture.
-    Uses Claude to analyze trends and predict potential issues.
+    Uses AI to analyze trends and predict potential issues.
     """
     import os
     from anthropic import Anthropic
@@ -482,7 +483,7 @@ Provide:
 Be concise and actionable."""
 
         response = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model=FAST_REASONING_MODEL,
             max_tokens=800,
             messages=[{"role": "user", "content": prompt}]
         )

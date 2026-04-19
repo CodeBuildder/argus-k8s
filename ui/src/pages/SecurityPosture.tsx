@@ -80,7 +80,7 @@ export default function SecurityPosture() {
           <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace' }}>
-                Incident Summary (Claude-Powered)
+                Incident Summary (AI-Powered)
               </div>
               <button
                 onClick={generateSummary}

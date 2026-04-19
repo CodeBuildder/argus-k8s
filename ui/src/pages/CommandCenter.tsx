@@ -298,7 +298,7 @@ function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
     {
       name: 'Argus AI',
       sub: 'Threat Analysis',
-      desc: 'Claude reasoning',
+      desc: 'AI reasoning',
       color: '#00d4ff',
       active: true,
       icon: '🧠',

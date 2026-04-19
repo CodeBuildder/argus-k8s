@@ -3,7 +3,7 @@ Argus Agent — context enricher
 Copyright (c) 2026 Kaushikkumaran
 
 Given a Falco alert, queries multiple data sources in parallel to build
-a rich context object for the Claude reasoning layer.
+a rich context object for the AI reasoning layer.
 
 Data sources:
   - Kubernetes API: pod spec, owner, image, restarts, node, namespace labels
@@ -15,7 +15,7 @@ Design principles:
   - All queries run concurrently via asyncio.gather
   - Partial failures return None for that field — never crash
   - Total enrichment time target: < 5 seconds
-  - Context is structured for direct consumption by the Claude prompt builder
+  - Context is structured for direct consumption by the prompt builder
 """
 
 import asyncio
