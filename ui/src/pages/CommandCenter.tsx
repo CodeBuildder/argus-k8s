@@ -22,6 +22,14 @@ interface Incident {
   confidence: number
 }
 
+interface ThreatDrop {
+  id: string
+  layerIndex: number
+  threatName: string
+  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM'
+  timestamp: number
+}
+
 function MiniSparkline({ data, color }: { data: number[]; color: string }) {
   const max = Math.max(...data, 1)
   const w = 80, h = 28
@@ -50,25 +58,66 @@ function LiveEventTicker({ incidents }: { incidents: Incident[] }) {
     CRITICAL: '#ff2d55', HIGH: '#ff9f0a', MED: '#ffd700', LOW: '#8b949e'
   }
 
+  const getActionDisplay = (action: string) => {
+    if (action === 'HUMAN_REQUIRED') {
+      return { icon: '👤', text: 'Attention Required', color: '#ff9f0a', clickable: true }
+    }
+    if (action === 'NOTIFY') {
+      return { icon: '💬', text: 'Slack Notified', color: '#00d4ff', clickable: false }
+    }
+    if (action === 'ISOLATE') {
+      return { icon: '🔒', text: 'Isolated', color: '#ff2d55', clickable: false }
+    }
+    if (action === 'KILL') {
+      return { icon: '⛔', text: 'Terminated', color: '#ff2d55', clickable: false }
+    }
+    return { icon: '✓', text: action, color: '#00ff9f', clickable: false }
+  }
+
   return (
-    <div ref={ref} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-      {incidents.slice(0, 20).map((inc, i) => (
-        <div key={inc.id} style={{
-          display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px',
-          background: i === 0 ? 'rgba(0,255,159,0.04)' : 'transparent',
-          borderRadius: '5px', borderLeft: `2px solid ${sevColor[inc.severity] || '#4a5568'}`,
-          animation: i === 0 ? 'fadeInUp 0.3s ease-out' : 'none',
-          transition: 'all 0.2s',
-        }}>
-          <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', width: '24px', flexShrink: 0 }}>{fmt(inc.ts)}</span>
-          <span style={{ fontSize: '8px', fontWeight: 700, color: sevColor[inc.severity], fontFamily: 'JetBrains Mono, monospace', width: '16px', flexShrink: 0 }}>
-            {inc.severity === 'CRITICAL' ? '●' : inc.severity === 'HIGH' ? '◉' : '○'}
-          </span>
-          <span style={{ fontSize: '10px', color: '#d1d5db', fontFamily: 'Inter, sans-serif', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.rule}</span>
-          {inc.namespace && <span style={{ fontSize: '7px', color: '#58a6ff', background: 'rgba(88,166,255,0.1)', border: '1px solid rgba(88,166,255,0.2)', padding: '1px 4px', borderRadius: '3px', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.namespace}</span>}
-          <span style={{ fontSize: '8px', color: inc.action_taken === 'ISOLATE' ? '#ff2d55' : inc.action_taken === 'NOTIFY' ? '#ff9f0a' : '#4a5568', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.action_taken}</span>
-        </div>
-      ))}
+    <div ref={ref} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {incidents.slice(0, 20).map((inc, i) => {
+        const actionDisplay = getActionDisplay(inc.action_taken)
+        return (
+          <div key={inc.id} style={{
+            display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px',
+            background: i === 0 ? 'rgba(0,255,159,0.04)' : 'rgba(0,0,0,0.2)',
+            borderRadius: '6px',
+            borderLeft: `3px solid ${sevColor[inc.severity] || '#4a5568'}`,
+            animation: i === 0 ? 'fadeInUp 0.3s ease-out' : 'none',
+            transition: 'all 0.2s',
+          }}>
+            <span style={{ fontSize: '9px', color: '#5a6478', fontFamily: 'JetBrains Mono, monospace', width: '28px', flexShrink: 0 }}>{fmt(inc.ts)}</span>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: sevColor[inc.severity], fontFamily: 'JetBrains Mono, monospace', width: '18px', flexShrink: 0 }}>
+              {inc.severity === 'CRITICAL' ? '●' : inc.severity === 'HIGH' ? '◉' : '○'}
+            </span>
+            <span style={{ fontSize: '11px', color: '#e6edf3', fontFamily: 'Inter, sans-serif', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{inc.rule}</span>
+            {inc.namespace && <span style={{ fontSize: '8px', color: '#58a6ff', background: 'rgba(88,166,255,0.15)', border: '1px solid rgba(88,166,255,0.3)', padding: '2px 6px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.namespace}</span>}
+            <div
+              onClick={() => actionDisplay.clickable && (window.location.href = '/approvals')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '9px',
+                color: actionDisplay.color,
+                background: `${actionDisplay.color}15`,
+                border: `1px solid ${actionDisplay.color}30`,
+                padding: '3px 8px',
+                borderRadius: '4px',
+                fontFamily: 'Inter, sans-serif',
+                flexShrink: 0,
+                cursor: actionDisplay.clickable ? 'pointer' : 'default',
+                transition: 'all 0.2s',
+                fontWeight: 600
+              }}
+            >
+              <span>{actionDisplay.icon}</span>
+              <span>{actionDisplay.text}</span>
+            </div>
+          </div>
+        )
+      })}
       {incidents.length === 0 && <div style={{ color: '#4a5568', fontSize: '10px', textAlign: 'center', padding: '20px' }}>No events yet</div>}
     </div>
   )
@@ -113,33 +162,368 @@ function NodeHealthBar({ name, ip, status, podCount, cpuPct, memPct }: { name: s
 }
 
 function DetectionLayerFlow({ recentSeverity }: { recentSeverity: string }) {
+  const [layerStats, setLayerStats] = useState({
+    falco: { value1: 0, value2: 0, rate: 0 },
+    ebpf: { value1: 0, value2: 0, rate: 0 },
+    kyverno: { value1: 0, value2: 0, rate: 0 },
+    cilium: { value1: 0, value2: 0, rate: 0 },
+    argus: { value1: 0, value2: 0, rate: 0 }
+  })
+
+  const [activeThreats, setActiveThreats] = useState<ThreatDrop[]>([])
+
+  useEffect(() => {
+    const updateStats = () => {
+      setLayerStats({
+        falco: {
+          value1: Math.floor(Math.random() * 50) + 100,
+          value2: Math.floor(Math.random() * 10) + 5,
+          rate: Math.random() * 20 + 10
+        },
+        ebpf: {
+          value1: Math.floor(Math.random() * 1000) + 5000,
+          value2: Math.floor(Math.random() * 50) + 20,
+          rate: Math.random() * 100 + 200
+        },
+        kyverno: {
+          value1: 12,
+          value2: Math.floor(Math.random() * 5) + 2,
+          rate: Math.random() * 5 + 2
+        },
+        cilium: {
+          value1: Math.floor(Math.random() * 2000) + 10000,
+          value2: Math.floor(Math.random() * 30) + 10,
+          rate: Math.random() * 150 + 300
+        },
+        argus: {
+          value1: Math.floor(Math.random() * 20) + 50,
+          value2: Math.floor(Math.random() * 8) + 3,
+          rate: Math.random() * 3 + 1
+        }
+      })
+    }
+    updateStats()
+    const interval = setInterval(updateStats, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    const threatNames = [
+      'Suspicious syscall detected',
+      'Unauthorized file access',
+      'Privilege escalation attempt',
+      'Network policy violation',
+      'Container escape detected',
+      'Crypto mining activity',
+      'Malicious process spawn',
+      'Secret exfiltration attempt'
+    ]
+
+    const injectThreat = () => {
+      const randomLayer = Math.floor(Math.random() * 5)
+      const severities: ('CRITICAL' | 'HIGH' | 'MEDIUM')[] = ['CRITICAL', 'HIGH', 'MEDIUM']
+      const randomSeverity = severities[Math.floor(Math.random() * severities.length)]
+      
+      const newThreat: ThreatDrop = {
+        id: `threat-${Date.now()}-${Math.random()}`,
+        layerIndex: randomLayer,
+        threatName: threatNames[Math.floor(Math.random() * threatNames.length)],
+        severity: randomSeverity,
+        timestamp: Date.now()
+      }
+      
+      setActiveThreats(prev => [...prev, newThreat])
+      
+      setTimeout(() => {
+        setActiveThreats(prev => prev.filter(t => t.id !== newThreat.id))
+      }, 3000)
+    }
+
+    const scheduleNext = () => {
+      const delay = Math.random() * 2000 + 2000
+      setTimeout(() => {
+        injectThreat()
+        scheduleNext()
+      }, delay)
+    }
+
+    scheduleNext()
+  }, [])
+
   const layers = [
-    { name: 'Falco', sub: 'Runtime', color: '#ff9f0a', active: true },
-    { name: 'eBPF', sub: 'Kernel', color: '#58a6ff', active: true },
-    { name: 'Kyverno', sub: 'Admission', color: '#bc8cff', active: true },
-    { name: 'Cilium', sub: 'Network', color: '#00ff9f', active: true },
-    { name: 'Argus AI', sub: 'Analysis', color: '#00ff9f', active: true },
+    {
+      name: 'Falco',
+      sub: 'Runtime Detection',
+      desc: 'Syscall monitoring',
+      color: '#ff9f0a',
+      active: true,
+      icon: '🔍',
+      stats: layerStats.falco,
+      metric1: 'Events',
+      metric2: 'Blocked'
+    },
+    {
+      name: 'eBPF',
+      sub: 'Kernel Hooks',
+      desc: 'Network & process',
+      color: '#58a6ff',
+      active: true,
+      icon: '⚡',
+      stats: layerStats.ebpf,
+      metric1: 'Flows',
+      metric2: 'Dropped'
+    },
+    {
+      name: 'Kyverno',
+      sub: 'Admission Control',
+      desc: 'Policy enforcement',
+      color: '#bc8cff',
+      active: true,
+      icon: '🛡️',
+      stats: layerStats.kyverno,
+      metric1: 'Policies',
+      metric2: 'Violations'
+    },
+    {
+      name: 'Cilium',
+      sub: 'Network Policy',
+      desc: 'L3-L7 filtering',
+      color: '#00ff9f',
+      active: true,
+      icon: '🌐',
+      stats: layerStats.cilium,
+      metric1: 'Connections',
+      metric2: 'Denied'
+    },
+    {
+      name: 'Argus AI',
+      sub: 'Threat Analysis',
+      desc: 'AI reasoning',
+      color: '#00d4ff',
+      active: true,
+      icon: '🧠',
+      stats: layerStats.argus,
+      metric1: 'Decisions',
+      metric2: 'Auto-fixed'
+    },
   ]
-  const threatColor = recentSeverity === 'CRITICAL' ? '#ff2d55' : recentSeverity === 'HIGH' ? '#ff9f0a' : '#00ff9f'
+
+  const getSeverityColor = (severity: string) => {
+    if (severity === 'CRITICAL') return '#ff2d55'
+    if (severity === 'HIGH') return '#ff9f0a'
+    return '#ffd700'
+  }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0', padding: '10px 0' }}>
-      {layers.map((layer, i) => (
-        <div key={layer.name} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: `${layer.color}12`, border: `1.5px solid ${layer.color}40`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1px', position: 'relative' }}>
-              <span style={{ fontSize: '9px', fontWeight: 700, color: layer.color, fontFamily: 'JetBrains Mono, monospace' }}>{layer.name}</span>
-              <span style={{ fontSize: '7px', color: '#4a5568', fontFamily: 'Inter, sans-serif' }}>{layer.sub}</span>
-              <div style={{ position: 'absolute', top: '-3px', right: '-3px', width: '7px', height: '7px', borderRadius: '50%', background: layer.active ? layer.color : '#4a5568', boxShadow: layer.active ? `0 0 5px ${layer.color}` : 'none' }} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px 0', position: 'relative' }}>
+      {/* Main flow */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0', position: 'relative' }}>
+        {layers.map((layer, i) => {
+          const layerThreats = activeThreats.filter(t => t.layerIndex === i)
+          
+          return (
+            <div key={layer.name} style={{ display: 'flex', alignItems: 'center', flex: 1, position: 'relative' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', position: 'relative' }}>
+                {/* Threat drops from above */}
+                {layerThreats.map(threat => (
+                  <div
+                    key={threat.id}
+                    onClick={() => window.location.href = '/threat-feed'}
+                    title={`${threat.severity}: ${threat.threatName}\nClick to view details`}
+                    style={{
+                      position: 'absolute',
+                      top: '-80px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      background: `radial-gradient(circle, ${getSeverityColor(threat.severity)}, ${getSeverityColor(threat.severity)}80)`,
+                      boxShadow: `0 0 20px ${getSeverityColor(threat.severity)}, 0 0 40px ${getSeverityColor(threat.severity)}60`,
+                      border: `3px solid ${getSeverityColor(threat.severity)}`,
+                      animation: 'dropThreat 3s ease-in forwards',
+                      cursor: 'pointer',
+                      zIndex: 100,
+                      transition: 'transform 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateX(-50%) scale(1.3)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateX(-50%) scale(1)'
+                    }}
+                  >
+                    {/* Threat trail */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-60px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '2px',
+                      height: '60px',
+                      background: `linear-gradient(to bottom, transparent, ${getSeverityColor(threat.severity)}80)`,
+                      animation: 'fadeTrail 3s ease-in forwards'
+                    }} />
+                  </div>
+                ))}
+
+                {/* Layer card */}
+                <div style={{
+                  width: '100%',
+                  maxWidth: '160px',
+                  minHeight: '140px',
+                  borderRadius: '12px',
+                  background: `linear-gradient(135deg, ${layer.color}08, ${layer.color}18)`,
+                  border: `2px solid ${layer.color}50`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  position: 'relative',
+                  padding: '12px',
+                  boxShadow: `0 4px 12px ${layer.color}20`,
+                  transition: 'all 0.3s ease'
+                }}>
+                  {/* Status indicator */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    background: layer.active ? layer.color : '#4a5568',
+                    boxShadow: layer.active ? `0 0 8px ${layer.color}` : 'none',
+                    animation: layer.active ? 'glowpulse 2s infinite' : 'none'
+                  }} />
+                  
+                  {/* Icon */}
+                  <div style={{ fontSize: '24px', marginBottom: '2px' }}>{layer.icon}</div>
+                  
+                  {/* Layer name */}
+                  <span style={{
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    color: layer.color,
+                    fontFamily: 'JetBrains Mono, monospace',
+                    textAlign: 'center'
+                  }}>{layer.name}</span>
+                  
+                  {/* Subtitle */}
+                  <span style={{
+                    fontSize: '8px',
+                    color: '#8892a4',
+                    fontFamily: 'Inter, sans-serif',
+                    textAlign: 'center',
+                    fontWeight: 600,
+                    marginBottom: '6px'
+                  }}>{layer.sub}</span>
+                  
+                  {/* Real-time metrics */}
+                  <div style={{
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '3px',
+                    background: 'rgba(0,0,0,0.2)',
+                    padding: '6px',
+                    borderRadius: '6px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '7px', color: '#5a6478', fontFamily: 'Inter, sans-serif' }}>{layer.metric1}</span>
+                      <span style={{ fontSize: '10px', color: '#e6edf3', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>
+                        {layer.stats.value1}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '7px', color: '#5a6478', fontFamily: 'Inter, sans-serif' }}>{layer.metric2}</span>
+                      <span style={{ fontSize: '10px', color: layer.color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>
+                        {layer.stats.value2}
+                      </span>
+                    </div>
+                    <div style={{
+                      fontSize: '7px',
+                      color: '#4a5568',
+                      textAlign: 'center',
+                      marginTop: '2px',
+                      fontFamily: 'JetBrains Mono, monospace'
+                    }}>
+                      {layer.stats.rate.toFixed(1)}/s
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Connection arrow */}
+              {i < layers.length - 1 && (
+                <div style={{
+                  width: '60px',
+                  height: '4px',
+                  background: `linear-gradient(90deg, ${layer.color}60, ${layers[i+1].color}60)`,
+                  flexShrink: 0,
+                  position: 'relative',
+                  margin: '0 -10px',
+                  borderRadius: '2px'
+                }}>
+                  {/* Arrow head */}
+                  <div style={{
+                    position: 'absolute',
+                    right: '-7px',
+                    top: '-4px',
+                    width: 0,
+                    height: 0,
+                    borderLeft: `8px solid ${layers[i+1].color}80`,
+                    borderTop: '6px solid transparent',
+                    borderBottom: '6px solid transparent'
+                  }} />
+                </div>
+              )}
             </div>
-          </div>
-          {i < layers.length - 1 && (
-            <div style={{ width: '20px', height: '2px', background: `linear-gradient(90deg, ${layer.color}60, ${layers[i+1].color}60)`, flexShrink: 0, position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '-2px', left: '50%', transform: 'translateX(-50%)', width: '5px', height: '5px', borderRadius: '50%', background: threatColor, animation: 'travelDot 2s linear infinite', animationDelay: `${i * 0.4}s` }} />
-            </div>
-          )}
+          )
+        })}
+      </div>
+      
+      {/* Flow description with legend */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '16px',
+        padding: '12px 20px',
+        background: 'rgba(0,212,255,0.05)',
+        borderRadius: '8px',
+        border: '1px solid rgba(0,212,255,0.15)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, #ff2d55, #ff2d5580)',
+            boxShadow: '0 0 10px #ff2d55',
+            animation: 'glowpulse 1.5s infinite',
+            border: '2px solid #ff2d55'
+          }} />
+          <span style={{
+            fontSize: '9px',
+            color: '#e6edf3',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontWeight: 600
+          }}>
+            = Threat Signal
+          </span>
         </div>
-      ))}
+        <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
+        <span style={{
+          fontSize: '10px',
+          color: '#8892a4',
+          fontFamily: 'Inter, sans-serif',
+          textAlign: 'center'
+        }}>
+          Threats drop randomly into layers • Hover to see details • Click to view alert
+        </span>
+      </div>
     </div>
   )
 }
@@ -186,7 +570,8 @@ export default function CommandCenter() {
       <style>{`
         @keyframes glowpulse{0%,100%{opacity:1}50%{opacity:0.6}}
         @keyframes fadeInUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes travelDot{0%{left:0%;opacity:0}20%{opacity:1}80%{opacity:1}100%{left:100%;opacity:0}}
+        @keyframes dropThreat{0%{top:-80px;opacity:0}20%{opacity:1}100%{top:50px;opacity:0}}
+        @keyframes fadeTrail{0%{opacity:0.8}100%{opacity:0}}
       `}</style>
 
       <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace' }}>⌂ Command Center</div>
@@ -207,7 +592,7 @@ export default function CommandCenter() {
         <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace' }}>Detection pipeline</div>
           <DetectionLayerFlow recentSeverity={recentSeverity} />
-          <div style={{ fontSize: '8px', color: '#4a5568', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>Threat signal flows through each layer in real time</div>
+          <div style={{ fontSize: '8px', color: '#4a5568', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>Threats inject randomly into detection layers</div>
         </div>
 
         <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -240,3 +625,5 @@ export default function CommandCenter() {
     </div>
   )
 }
+
+// Made with Bob

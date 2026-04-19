@@ -431,7 +431,7 @@ export default function ThreatFeed() {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00ff9f', boxShadow: '0 0 6px #00ff9f', flexShrink: 0, animation: 'glowpulse 2s infinite' }} />
-                <span style={{ fontSize: '9px', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>ARGUS AI · claude-sonnet-4-6</span>
+                <span style={{ fontSize: '9px', color: '#00ff9f', fontFamily: 'JetBrains Mono, monospace' }}>ARGUS AI · reasoning model</span>
                 <div style={{ flex: 1, height: '1px', background: 'rgba(0,255,159,0.1)' }} />
                 <span style={{ fontSize: '9px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(selected.confidence * 100)}% confidence</span>
               </div>

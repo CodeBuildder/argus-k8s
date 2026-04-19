@@ -2,7 +2,7 @@
 Argus Agent — action router
 Copyright (c) 2026 Kaushikkumaran
 
-Executes remediation actions based on Claude's decision.
+Executes remediation actions based on the AI decision.
 Every action is logged to the audit trail before and after execution.
 
 Safety rules:

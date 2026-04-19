@@ -1,5 +1,5 @@
 """
-Tests for the Claude reasoning layer.
+Tests for the AI reasoning layer.
 Copyright (c) 2026 Kaushikkumaran
 
 Uses mocked Anthropic API responses — no real API calls in tests.
@@ -69,7 +69,7 @@ SAMPLE_CONTEXT = {
     "enrichment_duration_ms": 245,
 }
 
-VALID_CLAUDE_RESPONSE = json.dumps({
+VALID_MODEL_RESPONSE = json.dumps({
     "severity": "HIGH",
     "confidence": 0.85,
     "assessment": "Shell process cat read /etc/shadow in a prod nginx container. This is highly unusual for a web server. The pod has been stable for 14 days with no restarts, suggesting external compromise rather than misconfiguration.",
@@ -98,7 +98,7 @@ def make_mock_response(content_text: str):
 
 class TestReasonAboutThreat:
     async def test_valid_response_returns_decision(self):
-        mock_response = make_mock_response(VALID_CLAUDE_RESPONSE)
+        mock_response = make_mock_response(VALID_MODEL_RESPONSE)
 
         with patch("anthropic.AsyncAnthropic") as mock_anthropic:
             mock_client = AsyncMock()
@@ -127,7 +127,7 @@ class TestReasonAboutThreat:
         assert decision.confidence == 0.0
 
     async def test_markdown_fenced_json_is_parsed(self):
-        fenced = "```json\n" + VALID_CLAUDE_RESPONSE + "\n```"
+        fenced = "```json\n" + VALID_MODEL_RESPONSE + "\n```"
         mock_response = make_mock_response(fenced)
 
         with patch("anthropic.AsyncAnthropic") as mock_anthropic:
@@ -154,7 +154,7 @@ class TestReasonAboutThreat:
         assert decision.recommended_action == RecommendedAction.HUMAN_REQUIRED
 
     async def test_confidence_clamped_to_range(self):
-        response_data = json.loads(VALID_CLAUDE_RESPONSE)
+        response_data = json.loads(VALID_MODEL_RESPONSE)
         response_data["confidence"] = 1.5
         mock_response = make_mock_response(json.dumps(response_data))
 

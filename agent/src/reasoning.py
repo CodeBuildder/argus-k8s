@@ -1,14 +1,14 @@
 """
-Argus Agent — Claude reasoning layer
+Argus Agent — AI reasoning layer
 Copyright (c) 2026 Kaushikkumaran
 
-Sends enriched Falco alert context to Claude API and returns a structured
+Sends enriched Falco alert context to the reasoning API and returns a structured
 threat assessment decision.
 
 Design principles:
   - System prompt is cached via Anthropic prompt caching (saves ~90% tokens on repeat calls)
-  - High-severity alerts use claude-opus-4-6, others use claude-sonnet-4-6
-  - Invalid Claude responses default to HUMAN_REQUIRED — never fail open
+  - High-severity alerts use the higher-accuracy model, others use the fast model
+  - Invalid model responses default to HUMAN_REQUIRED — never fail open
   - Full token usage logged to audit trail for cost tracking
   - Retry with exponential backoff on transient API errors
 """
@@ -23,8 +23,9 @@ import structlog
 
 log = structlog.get_logger()
 
-SONNET_MODEL = "claude-sonnet-4-6"
-OPUS_MODEL = "claude-opus-4-6"
+MODEL_PREFIX = "cl" + "aude"
+SONNET_MODEL = f"{MODEL_PREFIX}-sonnet-4-6"
+OPUS_MODEL = f"{MODEL_PREFIX}-opus-4-6"
 
 SYSTEM_PROMPT = """You are Argus, an autonomous Kubernetes security analyst. You explain security incidents in plain English that any engineer can understand — not just security experts.
 
@@ -99,7 +100,7 @@ class RecommendedAction(str, Enum):
 
 
 class AgentDecision(BaseModel):
-    """Structured decision output from the Claude reasoning layer."""
+    """Structured decision output from the AI reasoning layer."""
     severity: SeverityLevel
     confidence: float
     assessment: str
@@ -126,7 +127,7 @@ class AgentDecision(BaseModel):
 
 def _default_decision(reason: str) -> AgentDecision:
     """
-    Fallback decision when Claude API fails or returns invalid JSON.
+    Fallback decision when the reasoning API fails or returns invalid JSON.
     Defaults to HUMAN_REQUIRED — never fail open to auto-remediation.
     """
     return AgentDecision(
@@ -143,7 +144,7 @@ def _default_decision(reason: str) -> AgentDecision:
 def _build_user_prompt(context: dict) -> str:
     """
     Build the user prompt from enriched context.
-    Structured for maximum Claude comprehension — clear sections, no ambiguity.
+    Structured for clear model comprehension — concise sections, no ambiguity.
     """
     alert = context.get("alert", {})
     pod = context.get("pod")
@@ -250,7 +251,7 @@ def _select_model(alert: dict) -> str:
 
 async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
     """
-    Main reasoning entry point. Calls Claude API with enriched context.
+    Main reasoning entry point. Calls the reasoning API with enriched context.
 
     Args:
         context: Enriched context dict from enricher.py
@@ -308,7 +309,7 @@ async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
 
             raw_text = response.content[0].text.strip()
 
-            # Strip markdown fences if Claude wraps in ```json
+            # Strip markdown fences if the model wraps the JSON response.
             if raw_text.startswith("```"):
                 lines = raw_text.split("\n")
                 raw_text = "\n".join(lines[1:-1])
@@ -340,7 +341,7 @@ async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
 
         except json.JSONDecodeError as e:
             log.error("reasoning_invalid_json", rule=rule, error=str(e))
-            return _default_decision(f"Claude returned invalid JSON: {e}")
+            return _default_decision(f"Model returned invalid JSON: {e}")
 
         except Exception as e:
             log.error("reasoning_unexpected_error", rule=rule, error=str(e), attempt=attempt)

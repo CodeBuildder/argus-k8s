@@ -68,3 +68,97 @@
      ns=%k8s.ns.name cmd=%proc.cmdline)
   priority: CRITICAL
   tags: [argus, privilege_escalation, T1548]
+
+- rule: Secret pattern in container logs
+  desc: Detected potential secret or credential in container output
+  condition: >
+    spawned_process and
+    container and
+    (proc.cmdline contains "password=" or
+     proc.cmdline contains "token=" or
+     proc.cmdline contains "api_key=" or
+     proc.cmdline contains "secret=" or
+     proc.cmdline contains "AKIA" or
+     proc.cmdline contains "-----BEGIN" or
+     proc.cmdline pmatch (ghp_*) or
+     proc.cmdline pmatch (sk-*))
+  output: >
+    Potential secret detected in container command
+    (pod=%k8s.pod.name ns=%k8s.ns.name
+     cmd=%proc.cmdline image=%container.image.repository)
+  priority: HIGH
+  tags: [argus, secrets, T1552]
+
+- rule: Environment variable contains secret
+  desc: Container started with environment variable that appears to contain a secret
+  condition: >
+    container_started and
+    container and
+    (container.env contains "PASSWORD=" or
+     container.env contains "SECRET=" or
+     container.env contains "TOKEN=" or
+     container.env contains "API_KEY=" or
+     container.env contains "PRIVATE_KEY=")
+  output: >
+    Container started with secret in environment variable
+    (pod=%k8s.pod.name ns=%k8s.ns.name
+     image=%container.image.repository)
+  priority: HIGH
+  tags: [argus, secrets, configuration, T1552.001]
+
+- rule: AWS credentials file accessed
+  desc: Process accessed AWS credentials file
+  condition: >
+    open_read and
+    container and
+    (fd.name = "/root/.aws/credentials" or
+     fd.name contains "/.aws/credentials")
+  output: >
+    AWS credentials file accessed in container
+    (user=%user.name pod=%k8s.pod.name ns=%k8s.ns.name
+     file=%fd.name cmd=%proc.cmdline)
+  priority: CRITICAL
+  tags: [argus, secrets, cloud, T1552.001]
+
+- rule: SSH private key accessed
+  desc: Process accessed SSH private key file
+  condition: >
+    open_read and
+    container and
+    (fd.name contains "/.ssh/id_rsa" or
+     fd.name contains "/.ssh/id_dsa" or
+     fd.name contains "/.ssh/id_ecdsa" or
+     fd.name contains "/.ssh/id_ed25519")
+  output: >
+    SSH private key accessed in container
+    (user=%user.name pod=%k8s.pod.name ns=%k8s.ns.name
+     file=%fd.name cmd=%proc.cmdline)
+  priority: CRITICAL
+  tags: [argus, secrets, ssh, T1552.004]
+
+- rule: Kubernetes secret mounted and read
+  desc: Process read from mounted Kubernetes secret
+  condition: >
+    open_read and
+    container and
+    fd.name startswith "/var/run/secrets/kubernetes.io"
+  output: >
+    Kubernetes secret accessed in container
+    (user=%user.name pod=%k8s.pod.name ns=%k8s.ns.name
+     file=%fd.name cmd=%proc.cmdline)
+  priority: WARNING
+  tags: [argus, secrets, kubernetes, T1552]
+
+- rule: Base64 encoded secret in command
+  desc: Command contains base64 encoded data that may be a secret
+  condition: >
+    spawned_process and
+    container and
+    proc.cmdline contains "base64" and
+    (proc.cmdline contains "echo" or proc.cmdline contains "printf")
+  output: >
+    Base64 encoding detected in container command (possible secret)
+    (pod=%k8s.pod.name ns=%k8s.ns.name
+     cmd=%proc.cmdline image=%container.image.repository)
+  priority: WARNING
+  tags: [argus, secrets, encoding, T1027]
