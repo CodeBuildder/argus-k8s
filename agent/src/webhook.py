@@ -22,7 +22,7 @@ log = structlog.get_logger()
 router = APIRouter()
 
 # Deduplication cache: key -> timestamp of last seen
-# Prevents alert storms from overwhelming the Claude API
+# Prevents alert storms from overwhelming the reasoning API
 dedup_cache: dict[str, float] = {}
 
 # Default suppression window in seconds

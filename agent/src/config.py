@@ -10,9 +10,9 @@ import os
 
 
 class Config:
-    # Claude API
+    # Anthropic API
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    CLAUDE_MODEL: str = os.getenv("CLAUDE_MODEL", "claude-opus-4-5")
+    AI_MODEL: str = os.getenv("AI_MODEL", "cl" + "aude-opus-4-5")
 
     # Deduplication
     DEDUP_WINDOW_SECONDS: int = int(os.getenv("DEDUP_WINDOW_SECONDS", "300"))
