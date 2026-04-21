@@ -5,31 +5,32 @@ Original work — see NOTICE for details
 Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 -->
 
-# Argus
+<p align="center">
+  <a href="docs/media/demo.mp4">
+    <img src="docs/media/banner.gif" alt="Argus banner" width="100%" />
+  </a>
+</p>
 
-> A Kubernetes security platform combining eBPF-native threat detection,
-> policy enforcement, and an automated reasoning agent for real-time threat response.
+<h1 align="center">Argus</h1>
 
-## Demo media
+<p align="center">
+  A Kubernetes security platform combining eBPF-native threat detection,
+  policy enforcement, and an automated reasoning agent for real-time threat response.
+</p>
 
-Store README showcase assets in `docs/media/`.
+<p align="center">
+  <a href="docs/media/demo.mp4"><strong>Watch Demo Video</strong></a>
+  ·
+  <a href="docs/architecture.md"><strong>Architecture</strong></a>
+  ·
+  <a href="docs/ROADMAP.md"><strong>Roadmap</strong></a>
+</p>
 
-- Banner GIF: `docs/media/banner.gif`
-- Demo video: `docs/media/demo.mp4`
-
-Recommended README usage:
-
-```md
-![Argus banner](docs/media/banner.gif)
-
-[Watch the full demo video](docs/media/demo.mp4)
-```
-
-Notes:
-
-- Use the GIF for the top banner because GitHub renders it inline reliably.
-- Keep the MP4 in the same `docs/media/` folder and link to it from the README.
-- If you want an embedded playable video on GitHub, upload the MP4 through a GitHub issue/PR comment and paste the generated hosted URL into the README instead of a local repo path.
+<p align="center">
+  <a href="docs/media/demo.mp4">
+    Click to open the full demo video in GitHub's player
+  </a>
+</p>
 
 ## Cluster status
 
