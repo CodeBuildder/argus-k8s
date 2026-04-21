@@ -6,7 +6,7 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 -->
 
 <p align="center">
-  <a href="docs/media/demo.mp4">
+  <a href="https://drive.google.com/file/d/1oRYc60bNGRirMWPJlLNnzc_XiEa1ogjE/view?usp=sharing" target="_blank" rel="noopener noreferrer">
     <img src="docs/media/banner.gif" alt="Argus banner" width="100%" />
   </a>
 </p>
@@ -19,7 +19,7 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 </p>
 
 <p align="center">
-  <a href="docs/media/demo.mp4"><strong>Watch Demo Video</strong></a>
+  <a href="https://drive.google.com/file/d/1oRYc60bNGRirMWPJlLNnzc_XiEa1ogjE/view?usp=sharing" target="_blank" rel="noopener noreferrer"><strong>Watch Demo Video</strong></a>
   ·
   <a href="docs/architecture.md"><strong>Architecture</strong></a>
   ·
@@ -27,8 +27,8 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 </p>
 
 <p align="center">
-  <a href="docs/media/demo.mp4">
-    Click to open the full demo video in GitHub's player
+  <a href="https://drive.google.com/file/d/1oRYc60bNGRirMWPJlLNnzc_XiEa1ogjE/view?usp=sharing" target="_blank" rel="noopener noreferrer">
+    Click to watch the full demo video
   </a>
 </p>
 
