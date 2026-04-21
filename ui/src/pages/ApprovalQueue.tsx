@@ -111,16 +111,18 @@ export default function ApprovalQueue() {
 
   const simulateApproval = async () => {
     setSimulating(true)
-    try {
-      await fetch(`${API}/simulate-threats`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: 'human_approval', count: 3 }),
-      })
+    // Fire the simulation without blocking — poll the queue while it runs
+    fetch(`${API}/simulate-threats`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scenario: 'human_approval', count: 3 }),
+    }).catch(() => {})
+    // Poll 3 times over 3 seconds to catch when items appear
+    for (let i = 0; i < 3; i++) {
+      await new Promise(r => setTimeout(r, 1000))
       await fetchQueue()
-    } finally {
-      setSimulating(false)
     }
+    setSimulating(false)
   }
 
   const fmtTs = (ts?: string) => {

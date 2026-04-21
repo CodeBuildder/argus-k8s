@@ -258,7 +258,7 @@ export default function AgentChat() {
           </button>
         </div>
         <div style={{ fontSize: '8px', color: '#2a3349', textAlign: 'center', marginTop: '6px', fontFamily: 'JetBrains Mono, monospace' }}>
-          Powered by Claude · Full cluster context · Shift+Enter for newline
+          Full cluster context · Shift+Enter for newline
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { Activity, BrainCircuit, CloudCog, GitBranch, RadioTower, ShieldCheck, Z
 const pipeline = [
   { label: 'Kernel signal', detail: 'Falco and eBPF surface runtime behavior as it happens.', icon: RadioTower, color: '#00d4ff' },
   { label: 'Cluster context', detail: 'Cilium, Kyverno, and Kubernetes state add blast-radius evidence.', icon: GitBranch, color: '#00ff9f' },
-  { label: 'AI decision', detail: 'Argus scores confidence, MITRE stage, and recommended containment.', icon: BrainCircuit, color: '#bc8cff' },
+  { label: 'Threat decision', detail: 'Argus scores confidence, MITRE stage, and recommended containment.', icon: BrainCircuit, color: '#bc8cff' },
   { label: 'Autonomous action', detail: 'Policy-aware remediation isolates, terminates, notifies, or asks a human.', icon: Zap, color: '#ff9f0a' },
 ]
 
@@ -19,7 +19,7 @@ const stack = [
   'Cilium eBPF',
   'Falco',
   'Kyverno',
-  'AI Reasoning',
+  'Detection engine',
   'FastAPI',
   'React',
   'Prometheus',
@@ -104,6 +104,14 @@ export default function About() {
               <p className="mt-3 text-[12px] leading-6 text-[#9aa7bb]">{detail}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="border-b border-[rgba(0,255,159,0.08)] px-8 py-5">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#4a5568]">Built by</span>
+          <span className="font-mono text-[13px] font-bold text-[#e6edf3]">Kaushik Kumaran</span>
+          <span className="font-mono text-[11px] text-[#58a6ff]">a.k.a CodeBuildder</span>
         </div>
       </section>
 

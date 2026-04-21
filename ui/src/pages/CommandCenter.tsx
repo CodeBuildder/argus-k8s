@@ -56,14 +56,14 @@ const SEV_PARTICLE: Record<string, { size: number; clip?: string; br: string }> 
 }
 
 const LAYERS = [
-  { name: 'Kyverno', sub: 'Admission Gate',    color: '#bc8cff', desc: 'API server admission check. Rejects bad manifests before a pod is scheduled.',             m1: 'Policies',    m2: 'Rejected', activity: 34, label: 'Gate' },
-  { name: 'eBPF',    sub: 'Kernel Layer',      color: '#58a6ff', desc: 'Kernel probes see syscalls, process exec, file access, and memory/module behavior.',      m1: 'Syscalls',    m2: 'Denied',   activity: 91, label: 'Kernel' },
-  { name: 'Falco',   sub: 'Runtime Rules',     color: '#ff9f0a', desc: 'Falco turns kernel events into runtime detections: shells, token reads, drift.',          m1: 'Events',      m2: 'Actions',  activity: 78, label: 'Runtime' },
-  { name: 'Cilium',  sub: 'Network Datapath',  color: '#00ff9f', desc: 'eBPF networking enforces DNS, L3/L4/L7 policy, C2 egress, Tor, and lateral movement.',  m1: 'Connections', m2: 'Dropped',  activity: 65, label: 'Network' },
+  { name: 'Kyverno', sub: 'Admission Gate',    color: '#bc8cff', desc: 'API server admission check. Rejects bad manifests before a pod is scheduled.',             m1: 'Policies',    m2: 'Rejected', label: 'Gate' },
+  { name: 'eBPF',    sub: 'Kernel Layer',      color: '#58a6ff', desc: 'Kernel probes see syscalls, process exec, file access, and memory/module behavior.',      m1: 'Syscalls',    m2: 'Denied',   label: 'Kernel' },
+  { name: 'Falco',   sub: 'Runtime Rules',     color: '#ff9f0a', desc: 'Falco turns kernel events into runtime detections: shells, token reads, drift.',          m1: 'Events',      m2: 'Actions',  label: 'Runtime' },
+  { name: 'Cilium',  sub: 'Network Datapath',  color: '#00ff9f', desc: 'eBPF networking enforces DNS, L3/L4/L7 policy, C2 egress, Tor, and lateral movement.',  m1: 'Connections', m2: 'Dropped',  label: 'Network' },
 ]
 
 const ARGUS_ANALYSIS = {
-  name: 'Argus AI',
+  name: 'Argus',
   color: '#00d4ff',
   desc: 'Receives telemetry after detection, enriches context, explains blast radius, and routes the response. It is not an inline threat hop.',
 }
@@ -240,6 +240,11 @@ function signalLabel(inc: Incident): string {
   if (path.end === 2) return 'kernel event'
   if (path.end === 3) return 'network flow'
   return 'telemetry'
+}
+
+function metricActivity(eventCount: number, handledCount: number, rate: number): number {
+  if (eventCount <= 0 && handledCount <= 0 && rate <= 0) return 0
+  return Math.min(100, Math.max(eventCount * 14, handledCount * 22, Math.round(rate)))
 }
 
 // ─── Detection Pipeline ───────────────────────────────────────────────────────
@@ -432,6 +437,7 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
         {LAYERS.flatMap((layer, i) => {
           const segParticles = particles.filter(p => p.currentSegment === i)
           const stats = layerStats[i]
+          const activity = metricActivity(stats.v1, stats.v2, stats.rate)
           const items = []
 
           // Layer card
@@ -485,7 +491,7 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
                     <span style={{ fontSize: '16px', color: layer.color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{stats.v2}</span>
                   </div>
                   <div style={{ height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', marginTop: '4px' }}>
-                    <div style={{ height: '100%', width: `${layer.activity}%`, background: `linear-gradient(90deg, ${layer.color}60, ${layer.color})`, borderRadius: '3px', boxShadow: `0 0 6px ${layer.color}35` }} />
+                    <div style={{ height: '100%', width: `${activity}%`, background: `linear-gradient(90deg, ${layer.color}60, ${layer.color})`, borderRadius: '3px', boxShadow: activity > 0 ? `0 0 6px ${layer.color}35` : 'none' }} />
                   </div>
                   <div style={{ fontSize: '9px', color: '#4a5568', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>{stats.rate.toFixed(1)}/s</div>
                 </div>
@@ -688,7 +694,7 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
                 animation: 'intakeSweep 1.2s ease-out',
               }} />
               <span style={{ fontSize: '8px', color: latestArgusEvent.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, position: 'relative' }}>{latestArgusEvent.layer}</span>
-              <span style={{ fontSize: '8px', color: ARGUS_ANALYSIS.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, position: 'relative' }}>→ Argus AI</span>
+              <span style={{ fontSize: '8px', color: ARGUS_ANALYSIS.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, position: 'relative' }}>→ Argus</span>
               <span style={{ fontSize: '9px', color: '#9aa7b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'relative' }}>{latestArgusEvent.action} · {latestArgusEvent.rule}</span>
               <span style={{ fontSize: '8px', color: '#58a6ff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, textAlign: 'right', position: 'relative' }}>{latestArgusAge}s</span>
             </div>
@@ -761,11 +767,18 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
 function MiniSparkline({ data, color }: { data: number[]; color: string }) {
   const max = Math.max(...data, 1)
   const w = 80, h = 28
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * w},${h - (v / max) * h}`).join(' ')
+  const hasActivity = data.some(v => v > 0)
+  const pts = data.map((v, i) => `${(i / Math.max(data.length - 1, 1)) * w},${h - (v / max) * h}`).join(' ')
   return (
     <svg width={w} height={h} style={{ flexShrink: 0 }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" opacity="0.8" />
-      <polyline points={`0,${h} ${pts} ${w},${h}`} fill={color} fillOpacity="0.08" stroke="none" />
+      {hasActivity ? (
+        <>
+          <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" opacity="0.8" />
+          <polyline points={`0,${h} ${pts} ${w},${h}`} fill={color} fillOpacity="0.08" stroke="none" />
+        </>
+      ) : (
+        <line x1="0" y1={h} x2={w} y2={h} stroke={color} strokeWidth="1" opacity="0.18" />
+      )}
     </svg>
   )
 }
@@ -917,7 +930,7 @@ function SecurityLayerRow({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginTop: '4px' }}>
             <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-              <div style={{ width: `${activity}%`, height: '100%', background: color, borderRadius: '2px', transition: 'width 700ms ease-out', boxShadow: `0 0 8px ${color}70` }} />
+              <div style={{ width: `${activity}%`, height: '100%', background: color, borderRadius: '2px', transition: 'width 700ms ease-out', boxShadow: activity > 0 ? `0 0 8px ${color}70` : 'none' }} />
             </div>
             <span style={{ fontSize: '7px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap' }}>{updatedAgo}</span>
           </div>
@@ -1092,63 +1105,72 @@ export default function CommandCenter() {
         { label: 'Total all time',   value: incidents.length,                                                                  color: '#bc8cff', spark: null },
       ]
 
-  const recentWindow = Date.now() - 60 * 1000
+  const recentWindow = Date.now() - 60 * 60 * 1000
   const recentIncidents = incidents.filter(i => i.ts * 1000 > recentWindow)
   const layerCount = (match: (inc: Incident) => boolean) => recentIncidents.filter(match).length
   const lastLayerEvent = (match: (inc: Incident) => boolean) => {
+    if (!backendLive) return 'disconnected'
     const last = incidents.find(match)
     if (!last) return 'idle'
     const seconds = Math.max(0, Math.floor((Date.now() - last.ts * 1000) / 1000))
     return seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ago`
   }
+  const runtimeEvents = layerCount(i => getThreatPath(i).end === 2)
+  const kyvernoEvents = layerCount(i => i.kyverno_blocked || getThreatPath(i).end === 0)
+  const ciliumEvents = layerCount(i => getThreatPath(i).end === 3)
+  const ebpfEvents = layerCount(i => getThreatPath(i).end === 1)
+  const argusEvents = recentIncidents.length
+  const lokiEvents = incidents.filter(i => i.enrichment_sources?.includes?.('loki')).length
+  const connectedStatus: 'active' | 'inactive' = backendLive ? 'active' : 'inactive'
+  const lokiStatus: 'degraded' | 'inactive' = backendLive ? 'degraded' : 'inactive'
   const securityLayers = [
     {
       name: 'Falco runtime detection',
-      status: 'active' as const,
+      status: connectedStatus,
       detail: 'runtime events',
-      eventCount: layerCount(i => getThreatPath(i).end === 2),
-      activity: Math.min(100, 18 + layerCount(i => getThreatPath(i).end === 2) * 11),
+      eventCount: runtimeEvents,
+      activity: backendLive ? Math.min(100, runtimeEvents * 11) : 0,
       updatedAgo: lastLayerEvent(i => getThreatPath(i).end === 2),
     },
     {
       name: 'Kyverno admission control',
-      status: 'active' as const,
+      status: connectedStatus,
       detail: 'policy rejects',
-      eventCount: layerCount(i => i.kyverno_blocked || getThreatPath(i).end === 0),
-      activity: Math.min(100, 16 + layerCount(i => i.kyverno_blocked || getThreatPath(i).end === 0) * 14),
+      eventCount: kyvernoEvents,
+      activity: backendLive ? Math.min(100, kyvernoEvents * 14) : 0,
       updatedAgo: lastLayerEvent(i => i.kyverno_blocked || getThreatPath(i).end === 0),
     },
     {
       name: 'Cilium eBPF networking',
-      status: 'active' as const,
+      status: connectedStatus,
       detail: 'flow decisions',
-      eventCount: layerCount(i => getThreatPath(i).end === 3),
-      activity: Math.min(100, 24 + layerCount(i => getThreatPath(i).end === 3) * 10),
+      eventCount: ciliumEvents,
+      activity: backendLive ? Math.min(100, ciliumEvents * 10) : 0,
       updatedAgo: lastLayerEvent(i => getThreatPath(i).end === 3),
     },
     {
       name: 'eBPF kernel telemetry',
-      status: 'active' as const,
+      status: connectedStatus,
       detail: 'kernel signals',
-      eventCount: layerCount(i => getThreatPath(i).end === 1),
-      activity: Math.min(100, 20 + layerCount(i => getThreatPath(i).end === 1) * 12),
+      eventCount: ebpfEvents,
+      activity: backendLive ? Math.min(100, ebpfEvents * 12) : 0,
       updatedAgo: lastLayerEvent(i => getThreatPath(i).end === 1),
     },
     {
-      name: 'Argus AI agent',
-      status: 'active' as const,
+      name: 'Argus agent',
+      status: connectedStatus,
       detail: 'decisions routed',
-      eventCount: recentIncidents.length,
-      activity: Math.min(100, 28 + recentIncidents.length * 5),
+      eventCount: argusEvents,
+      activity: backendLive ? Math.min(100, argusEvents * 5) : 0,
       updatedAgo: incidents[0] ? lastLayerEvent(() => true) : 'idle',
     },
     {
       name: 'Loki log aggregation',
-      status: 'degraded' as const,
+      status: lokiStatus,
       detail: 'direct push failing',
-      eventCount: incidents.filter(i => i.enrichment_sources?.includes?.('loki')).length,
-      activity: 34,
-      updatedAgo: 'retrying',
+      eventCount: lokiEvents,
+      activity: backendLive ? Math.min(100, lokiEvents * 16) : 0,
+      updatedAgo: backendLive ? (lokiEvents > 0 ? 'retrying' : 'idle') : 'disconnected',
     },
   ]
 
@@ -1336,7 +1358,7 @@ export default function CommandCenter() {
         <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace', marginBottom: '4px', display: 'flex', alignItems: 'center' }}>
             Security Layers
-            <span style={{ fontSize: '7px', color: '#4a5568', letterSpacing: '0', marginLeft: 'auto' }}>last 1m activity</span>
+            <span style={{ fontSize: '7px', color: '#4a5568', letterSpacing: '0', marginLeft: 'auto' }}>last 1h activity</span>
           </div>
           {securityLayers.map(layer => (
             <SecurityLayerRow

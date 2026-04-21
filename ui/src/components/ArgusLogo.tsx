@@ -121,4 +121,3 @@ export default function ArgusLogo({ size = 32 }: { size?: number }) {
   )
 }
 
-// Made with Bob
