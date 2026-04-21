@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import FormattedAssistantContent from '../components/FormattedAssistantContent'
 
 const API = '/api'
 
@@ -27,7 +29,7 @@ interface Incident {
   namespace: string
   hostname: string
   assessment: string
-  what_happened?: string[]
+  what_happened?: string[] | string
   blast_radius_bullets?: string[]
   action_steps?: string[]
   blast_radius: string
@@ -36,16 +38,204 @@ interface Incident {
   action_status: string
   confidence: number
   likely_false_positive: boolean
+  kyverno_blocked?: boolean
   mitre_tags: string[]
   enrichment_sources: string[]
   enrichment_duration_ms: number
 }
 
-const NODES = [
-  { name: 'k3s-master', ip: '192.168.139.42' },
-  { name: 'k3s-worker1', ip: '192.168.139.77' },
-  { name: 'k3s-worker2', ip: '192.168.139.45' },
-]
+function toArray(v: string[] | string | undefined): string[] {
+  if (!v) return []
+  if (Array.isArray(v)) return v
+  return [v]
+}
+
+function getContextualActionSteps(inc: Incident): string[] {
+  const steps = toArray(inc.action_steps)
+  if (steps.length > 0 && !steps.every(s => s === 'Review incident' || s === 'Verify legitimacy')) {
+    return steps
+  }
+  const rule = inc.rule.toLowerCase()
+  const action = inc.recommended_action || inc.action_taken
+  if (inc.kyverno_blocked) {
+    return [
+      'Workload was blocked at admission — cluster remains safe',
+      'Identify who submitted this workload via kubectl get events',
+      'Fix the policy violation in the deployment spec and re-deploy',
+      'Run: kubectl get policyreport -A to see full Kyverno violations',
+    ]
+  }
+  if (action === 'KILL') return [
+    'Container automatically terminated by Argus — workload is offline',
+    'Rotate all secrets and tokens mounted in the affected pod',
+    'Review pod logs and kubectl exec audit trail for root cause',
+    'Redeploy from a verified clean image after investigation',
+  ]
+  if (action === 'ISOLATE') return [
+    'Pod network isolated — threat contained, workload still running',
+    'Collect forensic data: kubectl debug, log capture before deleting',
+    'Identify the attack vector and patch before re-enabling network',
+    'Review Hubble flows for lateral movement attempts',
+  ]
+  if (action === 'HUMAN_REQUIRED') return [
+    'AI confidence below auto-remediation threshold — human review required',
+    'Check Approval Queue (/approvals) to approve or reject the action',
+    'Review incident timeline in the Enrichment section below',
+    'Examine MITRE tags to understand attacker objective',
+    'Correlate with other incidents in the same namespace/node',
+  ]
+  if (rule.includes('kyverno')) return [
+    'Kyverno blocked this workload at admission control',
+    'No runtime risk — pod was never scheduled',
+    'Fix the violated policy in the deployment manifest',
+    'Re-deploy after correcting the security policy violations',
+  ]
+  return [
+    'Review the full incident timeline in the enrichment panel',
+    'Correlate with other recent incidents on the same node',
+    'Check Hubble flows for unusual network activity',
+    'Escalate to security team if pattern persists',
+  ]
+}
+
+interface ChatMessage { role: 'user' | 'assistant'; content: string; ts: number }
+
+function AskArgusPanel({ incident }: { incident: Incident }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setMessages([])
+    setInput('')
+  }, [incident.id])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const send = useCallback(async () => {
+    const text = input.trim()
+    if (!text || loading) return
+    const userMsg: ChatMessage = { role: 'user', content: text, ts: Date.now() }
+    const next = [...messages, userMsg]
+    setMessages(next)
+    setInput('')
+    setLoading(true)
+    try {
+      const res = await fetch(`${API}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: next.map(m => ({ role: m.role, content: m.content })),
+          incident_id: incident.id,
+        }),
+      })
+      const data = await res.json()
+      setMessages(prev => [...prev, { role: 'assistant', content: data.response || 'No response', ts: Date.now() }])
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Failed to reach Argus AI. Check agent status.', ts: Date.now() }])
+    }
+    setLoading(false)
+  }, [input, loading, messages, incident.id])
+
+  const SUGGESTIONS = [
+    'What happened?',
+    'How do I remediate this?',
+    'Is this a false positive?',
+    'What MITRE technique is this?',
+  ]
+
+  return (
+    <div style={{ marginBottom: 0, animation: 'fadeInUp 0.2s ease-out both', animationDelay: '0.3s' }}>
+      <div style={{ fontSize: '10px', color: '#00d4ff', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,212,255,0.08)', fontFamily: 'JetBrains Mono, monospace' }}>
+        ◎ Ask Argus AI
+      </div>
+
+      {/* Chat history */}
+      {messages.length > 0 && (
+        <div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+          {messages.map((m, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: m.role === 'user' ? 'row-reverse' : 'row', gap: '6px', alignItems: 'flex-start' }}>
+              <div style={{
+                padding: '7px 10px', borderRadius: m.role === 'user' ? '10px 3px 10px 10px' : '3px 10px 10px 10px',
+                background: m.role === 'user' ? 'rgba(88,166,255,0.1)' : 'rgba(0,212,255,0.05)',
+                border: `1px solid ${m.role === 'user' ? 'rgba(88,166,255,0.25)' : 'rgba(0,212,255,0.12)'}`,
+                borderLeft: m.role === 'assistant' ? '2px solid rgba(0,212,255,0.4)' : undefined,
+                fontSize: '11px', color: '#d1d5db', lineHeight: 1.55, maxWidth: '90%',
+                fontFamily: 'Inter, sans-serif',
+              }}>
+                {m.role === 'assistant' ? <FormattedAssistantContent content={m.content} compact /> : m.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div style={{ display: 'flex', gap: '4px', padding: '8px 10px' }}>
+              {[0,1,2].map(i => (
+                <div key={i} style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00d4ff', animation: `typingDot 1.2s ease-in-out ${i*0.2}s infinite` }} />
+              ))}
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      {/* Suggestion chips (only when no messages yet) */}
+      {messages.length === 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+          {SUGGESTIONS.map(s => (
+            <button key={s} onClick={() => { setInput(s); }} style={{
+              background: 'rgba(0,212,255,0.05)', border: '1px solid rgba(0,212,255,0.15)',
+              borderRadius: '20px', color: '#5a7fa8', cursor: 'pointer',
+              padding: '3px 10px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.12)'; e.currentTarget.style.color = '#00d4ff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,212,255,0.05)'; e.currentTarget.style.color = '#5a7fa8' }}
+            >{s}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Input */}
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(0,212,255,0.15)', borderRadius: '7px', padding: '6px 10px' }}>
+        <input
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+          placeholder="Ask about this incident..."
+          disabled={loading}
+          style={{
+            flex: 1, background: 'transparent', border: 'none', color: '#e2e8f5',
+            fontSize: '11px', fontFamily: 'Inter, sans-serif', outline: 'none',
+          }}
+        />
+        <button
+          onClick={send}
+          disabled={!input.trim() || loading}
+          style={{
+            background: input.trim() && !loading ? 'rgba(0,212,255,0.15)' : 'transparent',
+            border: `1px solid ${input.trim() && !loading ? 'rgba(0,212,255,0.4)' : 'rgba(255,255,255,0.06)'}`,
+            borderRadius: '5px', color: input.trim() && !loading ? '#00d4ff' : '#3d4a5f',
+            cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
+            padding: '3px 10px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace',
+          }}
+        >
+          {loading ? '...' : 'Ask'}
+        </button>
+      </div>
+      <style>{`@keyframes typingDot { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-3px)} }`}</style>
+    </div>
+  )
+}
+
+interface NodeTelemetry {
+  name: string
+  ip: string
+  pods: number
+  recent_incidents?: number
+}
 
 type PodStatus = 'threat' | 'risk' | 'safe' | 'isolated'
 type NodeStatus = 'threat' | 'risk' | 'safe'
@@ -118,7 +308,7 @@ function NodeStatusIcon({ status }: { status: NodeStatus }) {
   )
 }
 
-function ImpactDiagram({ incident }: { incident: any }) {
+function ImpactDiagram({ incident, nodes }: { incident: any; nodes: NodeTelemetry[] }) {
   const [scanPos, setScanPos] = React.useState(0)
   const [barsAnimated, setBarsAnimated] = React.useState(false)
 
@@ -133,7 +323,7 @@ function ImpactDiagram({ incident }: { incident: any }) {
     return () => clearTimeout(t)
   }, [incident.id])
 
-  const threatNode = incident.hostname || 'k3s-worker1'
+  const threatNode = incident.hostname || nodes[0]?.name || ''
   const threatPod = incident.pod
   const threatNs = incident.namespace
 
@@ -163,11 +353,16 @@ function ImpactDiagram({ incident }: { incident: any }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid rgba(0,255,159,0.06)' }}>
         <span style={{ fontSize: '8px', background: 'rgba(0,255,159,0.08)', border: '1px solid rgba(0,255,159,0.2)', color: '#00ff9f', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>argus-k8s</span>
         <span style={{ fontSize: '11px', fontWeight: 600, color: '#f0f6fc' }}>Production cluster</span>
-        <span style={{ fontSize: '8px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>3 nodes · 4 namespaces</span>
+        <span style={{ fontSize: '8px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{nodes.length} nodes · live /api/node-telemetry</span>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '10px' }}>
-        {NODES.map(node => {
+        {nodes.length === 0 && (
+          <div style={{ padding: '14px', textAlign: 'center', color: '#4a5568', fontSize: '10px', border: '1px dashed rgba(0,255,159,0.12)', borderRadius: '7px' }}>
+            Waiting for backend node telemetry.
+          </div>
+        )}
+        {nodes.map(node => {
           const status = getNodeStatus(node.name) as 'threat' | 'risk' | 'safe'
           const isThreat = status === 'threat'
           const isRisk = status === 'risk'
@@ -184,9 +379,8 @@ function ImpactDiagram({ incident }: { incident: any }) {
           ] : []
 
           const safePods = !isThreat && !isRisk ? [
-            { name: 'argus-agent', status: 'safe' as PodStatus, ns: 'argus-system' },
-            { name: 'kyverno', status: 'safe' as PodStatus, ns: 'kyverno' },
-            { name: 'cilium', status: 'safe' as PodStatus, ns: 'kube-system' },
+            { name: `${node.pods} pods`, status: 'safe' as PodStatus, ns: 'live' },
+            { name: `${node.recent_incidents || 0} events`, status: 'safe' as PodStatus, ns: '1m' },
           ] : []
 
           const allPods = [...threatPods, ...riskPods, ...safePods]
@@ -252,12 +446,15 @@ function ImpactDiagram({ incident }: { incident: any }) {
 }
 
 export default function ThreatFeed() {
+  const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [incidents, setIncidents] = useState<Incident[]>([])
   const [selected, setSelected] = useState<Incident | null>(null)
   const [filter, setFilter] = useState<string>('ALL')
   const [nsFilter, setNsFilter] = useState<string>('ALL')
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = React.useState<string>('')
+  const [nodes, setNodes] = useState<NodeTelemetry[]>([])
   const prevCount = useRef(0)
   const newIds = useRef<Set<string>>(new Set())
 
@@ -283,11 +480,34 @@ export default function ThreatFeed() {
     }
   }
 
+  const fetchNodes = async () => {
+    try {
+      const r = await fetch(`${API}/node-telemetry`)
+      if (!r.ok) return
+      const data = await r.json()
+      setNodes(data.nodes || [])
+    } catch {}
+  }
+
   useEffect(() => {
     fetchIncidents()
-    const t = setInterval(fetchIncidents, 3000)
-    return () => clearInterval(t)
+    fetchNodes()
+    const incidentTimer = setInterval(fetchIncidents, 3000)
+    const nodeTimer = setInterval(fetchNodes, 5000)
+    return () => {
+      clearInterval(incidentTimer)
+      clearInterval(nodeTimer)
+    }
   }, [])
+
+  useEffect(() => {
+    const selectedId = searchParams.get('id')
+    if (!selectedId) return
+    const match = incidents.find(i => i.id === selectedId)
+    if (match && selected?.id !== match.id) {
+      setSelected(match)
+    }
+  }, [incidents, searchParams, selected?.id])
 
   const namespaces = ['ALL', ...Array.from(new Set(incidents.map(i => i.namespace).filter(Boolean)))]
   const filtered = incidents.filter(i => {
@@ -355,7 +575,7 @@ export default function ThreatFeed() {
           </span>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px 28px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {loading && (
             <div style={{ color: '#4a5568', fontSize: '10px', textAlign: 'center', padding: '20px' }}>
               Connecting to agent...
@@ -371,36 +591,59 @@ export default function ThreatFeed() {
             const act = ACTION_CONFIG[inc.action_taken] || ACTION_CONFIG.LOG
             const isNew = newIds.current.has(inc.id)
             return (
-              <div key={inc.id} onClick={() => setSelected(selected?.id === inc.id ? null : inc)}
+              <div key={inc.id} onClick={() => {
+                if (selected?.id === inc.id) {
+                  setSelected(null)
+                  setSearchParams({})
+                } else {
+                  setSelected(inc)
+                  setSearchParams({ id: inc.id })
+                }
+              }}
                 style={{
                   borderRadius: '6px', border: `1px solid ${selected?.id === inc.id ? 'rgba(0,255,159,0.3)' : sev.border}`,
                   background: selected?.id === inc.id ? '#1c2433' : inc.severity === 'CRITICAL' ? 'rgba(255,45,85,0.05)' : '#1a2233',
-                  padding: '13px 15px', minHeight: '80px', cursor: 'pointer', position: 'relative', overflow: 'hidden',
+                  padding: '14px 16px 14px 20px', minHeight: '100px', cursor: 'pointer', position: 'relative', overflow: 'visible',
                   fontFamily: 'Inter, sans-serif',
-                  transition: 'all 0.12s',
+                  transition: 'border-color 0.12s, background 0.12s, transform 0.12s',
                   animation: isNew ? 'slideIn 0.3s ease-out' : undefined,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = selected?.id === inc.id ? '#1f2a3c' : inc.severity === 'CRITICAL' ? 'rgba(255,45,85,0.075)' : '#1d2738'
+                  e.currentTarget.style.transform = 'translateX(2px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = selected?.id === inc.id ? '#1c2433' : inc.severity === 'CRITICAL' ? 'rgba(255,45,85,0.05)' : '#1a2233'
+                  e.currentTarget.style.transform = 'translateX(0)'
                 }}
               >
                 <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: sev.dot, borderRadius: '3px 0 0 3px' }} />
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '3px', background: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      ● {inc.severity}
-                    </span>
-                    <span style={{ fontSize: '10px', color: `${act.color}`, background: `${act.color}22`, padding: '2px 8px', borderRadius: '3px', border: `1px solid ${act.color}44` }}>
-                      {act.label}
+                <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', alignItems: 'center', gap: '14px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                      <span style={{ fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '3px', background: sev.bg, color: sev.color, border: `1px solid ${sev.border}`, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        ● {inc.severity}
+                      </span>
+                      <span style={{ fontSize: '10px', color: `${act.color}`, background: `${act.color}22`, padding: '2px 8px', borderRadius: '3px', border: `1px solid ${act.color}44` }}>
+                        {act.label}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '10px', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap' }}>{fmt(inc.ts)} · {inc.hostname}</span>
+                  </div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#f0f6fc', fontFamily: 'Inter, sans-serif', letterSpacing: '0', marginBottom: '8px', lineHeight: 1.35 }}>{inc.rule}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {inc.kyverno_blocked && (
+                      <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', fontWeight: 700, color: '#bc8cff', background: 'rgba(188,140,255,0.1)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(188,140,255,0.35)' }}>
+                        KYVERNO BLOCKED
+                      </span>
+                    )}
+                    {inc.namespace && <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(88,166,255,0.8)', background: 'rgba(88,166,255,0.08)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(88,166,255,0.2)' }}>{inc.namespace}</span>}
+                    {inc.pod && <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#4a5568', background: '#0d1117', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(0,255,159,0.08)' }}>{inc.pod}</span>}
+                    {inc.mitre_tags?.map(t => <span key={t} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(188,140,255,0.8)', background: 'rgba(188,140,255,0.06)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(188,140,255,0.2)' }}>{t}</span>)}
+                    <span style={{ fontSize: '10px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace', paddingLeft: '8px' }}>
+                      {Math.round(inc.confidence * 100)}% confidence
                     </span>
                   </div>
-                  <span style={{ fontSize: '10px', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace' }}>{fmt(inc.ts)} · {inc.hostname}</span>
-                </div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: '#f0f6fc', fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em', marginBottom: '5px', lineHeight: 1.3 }}>{inc.rule}</div>
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  {inc.namespace && <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(88,166,255,0.8)', background: 'rgba(88,166,255,0.08)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(88,166,255,0.2)' }}>{inc.namespace}</span>}
-                  {inc.pod && <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: '#4a5568', background: '#0d1117', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(0,255,159,0.08)' }}>{inc.pod}</span>}
-                  {inc.mitre_tags?.map(t => <span key={t} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', color: 'rgba(188,140,255,0.8)', background: 'rgba(188,140,255,0.06)', padding: '2px 7px', borderRadius: '3px', border: '1px solid rgba(188,140,255,0.2)' }}>{t}</span>)}
-                  <span style={{ fontSize: '10px', color: '#4a5568', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>
-                    {Math.round(inc.confidence * 100)}% confidence
-                  </span>
                 </div>
               </div>
             )
@@ -412,7 +655,7 @@ export default function ThreatFeed() {
         <div key={selected.id} style={{ borderLeft: '1px solid rgba(0,255,159,0.1)', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0d1117', animation: 'slideInRight 0.2s ease-out' }}>
           <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <span style={{ fontSize: '11px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px' }}>Incident detail</span>
-            <button onClick={() => setSelected(null)} style={{ fontSize: '12px', color: '#4a5568', background: 'transparent', border: 'none', cursor: 'pointer' }}>✕</button>
+            <button onClick={() => { setSelected(null); setSearchParams({}) }} style={{ fontSize: '12px', color: '#4a5568', background: 'transparent', border: 'none', cursor: 'pointer' }}>✕</button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '12px', fontFamily: 'Inter, sans-serif' }}>
             <DetailSection title="Alert" animationDelay="0.05s">
@@ -420,6 +663,12 @@ export default function ThreatFeed() {
               <Row label="Priority" value={selected.priority} />
               <Row label="Severity" value={selected.severity} color={SEV_CONFIG[selected.severity]?.color} />
               <Row label="Hostname" value={selected.hostname} />
+              {selected.kyverno_blocked && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', marginTop: '4px', background: 'rgba(188,140,255,0.08)', borderRadius: '5px', border: '1px solid rgba(188,140,255,0.25)', paddingLeft: '8px', paddingRight: '8px' }}>
+                  <span style={{ fontSize: '10px', color: '#bc8cff', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>⛔ Blocked by Kyverno</span>
+                  <span style={{ fontSize: '9px', color: '#6b4fa8' }}>Pod never ran</span>
+                </div>
+              )}
             </DetailSection>
             <DetailSection title="Target" animationDelay="0.1s">
               <Row label="Pod" value={selected.pod || '— host level'} color={!selected.pod ? '#4a5568' : undefined} />
@@ -440,26 +689,37 @@ export default function ThreatFeed() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#ff2d55', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>What happened</span>
                 </div>
-                {((selected as any).what_happened?.length > 0 ? (selected as any).what_happened : [selected.assessment]).map((bullet: string, i: number) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '5px', alignItems: 'flex-start' }}>
-                    <span style={{ color: '#ff2d55', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>▸</span>
-                    <span style={{ fontSize: '11px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{bullet}</span>
-                  </div>
-                ))}
+                {toArray((selected as any).what_happened).length > 0
+                  ? toArray((selected as any).what_happened).map((bullet: string, i: number) => (
+                    <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '5px', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#ff2d55', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>•</span>
+                      <span style={{ fontSize: '11px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{bullet}</span>
+                    </div>
+                  ))
+                  : (
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '5px', alignItems: 'flex-start' }}>
+                      <span style={{ color: '#ff2d55', fontSize: '10px', marginTop: '2px', flexShrink: 0 }}>•</span>
+                      <span style={{ fontSize: '11px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{selected.assessment}</span>
+                    </div>
+                  )
+                }
               </div>
 
-              <ImpactDiagram incident={selected} />
+              <ImpactDiagram incident={selected} nodes={nodes} />
 
               <div style={{ background: 'rgba(88,166,255,0.04)', border: '1px solid rgba(88,166,255,0.12)', borderRadius: '8px', padding: '10px 12px', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '7px' }}>
                   <span style={{ fontSize: '9px', fontWeight: 700, color: '#58a6ff', textTransform: 'uppercase', letterSpacing: '1px', fontFamily: 'JetBrains Mono, monospace' }}>Recommended actions</span>
                 </div>
-                {((selected as any).action_steps?.length > 0 ? (selected as any).action_steps : [`Take action: ${selected.recommended_action}`]).map((step: string, i: number) => (
+                {getContextualActionSteps(selected).map((step: string, i: number) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '7px', alignItems: 'flex-start' }}>
                     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'rgba(88,166,255,0.12)', border: '1px solid rgba(88,166,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', color: '#58a6ff', fontWeight: 700, flexShrink: 0, marginTop: '1px', fontFamily: 'JetBrains Mono, monospace' }}>{i + 1}</div>
                     <span style={{ fontSize: '11px', color: '#d1d5db', lineHeight: 1.6, fontFamily: 'Inter, sans-serif' }}>{step}</span>
                   </div>
                 ))}
+                <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(88,166,255,0.12)' }}>
+                  <AskArgusPanel incident={selected} />
+                </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -477,16 +737,29 @@ export default function ThreatFeed() {
             <div style={{ marginBottom: '14px', animation: 'fadeInUp 0.2s ease-out both', animationDelay: '0.2s' }}>
               <div style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '8px', paddingBottom: '4px', borderBottom: '1px solid rgba(0,255,159,0.08)', fontFamily: 'JetBrains Mono, monospace' }}>Response</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: `${(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color}11`, border: `1px solid ${(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color}33`, borderRadius: '7px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selected.action_taken === 'HUMAN_REQUIRED') {
+                      navigate(`/approvals?incident_id=${encodeURIComponent(selected.id)}`)
+                    }
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', background: `${(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color}11`, border: `1px solid ${(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color}33`, borderRadius: '7px', cursor: selected.action_taken === 'HUMAN_REQUIRED' ? 'pointer' : 'default', textAlign: 'left' }}
+                >
                   <div>
                     <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px', fontFamily: 'Inter, sans-serif' }}>Action taken</div>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: (ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).color, fontFamily: 'Inter, sans-serif', letterSpacing: '-0.01em' }}>{(ACTION_CONFIG[selected.action_taken] || ACTION_CONFIG.LOG).label}</div>
+                    {selected.action_taken === 'HUMAN_REQUIRED' && (
+                      <div style={{ marginTop: '5px', fontSize: '9px', color: '#58a6ff', fontFamily: 'JetBrains Mono, monospace' }}>
+                        Open human approval request →
+                      </div>
+                    )}
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '8px', color: '#4a5568', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '3px', fontFamily: 'Inter, sans-serif' }}>Status</div>
                     <div style={{ fontSize: '11px', fontWeight: 600, color: selected.action_status === 'completed' ? '#00ff9f' : selected.action_status === 'failed' ? '#ff2d55' : '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>● {selected.action_status}</div>
                   </div>
-                </div>
+                </button>
               </div>
             </div>
 
