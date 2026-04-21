@@ -453,6 +453,7 @@ export default function ThreatFeed() {
   const [filter, setFilter] = useState<string>('ALL')
   const [nsFilter, setNsFilter] = useState<string>('ALL')
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [lastUpdated, setLastUpdated] = React.useState<string>('')
   const [nodes, setNodes] = useState<NodeTelemetry[]>([])
   const prevCount = useRef(0)
@@ -549,14 +550,19 @@ export default function ThreatFeed() {
             {namespaces.map(ns => <option key={ns} value={ns}>{ns}</option>)}
           </select>
           <button
-            onClick={() => { fetchIncidents() }}
+            onClick={async () => {
+              setRefreshing(true)
+              await fetchIncidents()
+              setRefreshing(false)
+            }}
+            disabled={refreshing}
             title="Refresh feed"
             style={{
-              background: 'transparent',
+              background: refreshing ? 'rgba(0,255,159,0.06)' : 'transparent',
               border: '1px solid rgba(0,255,159,0.2)',
               borderRadius: '6px',
               color: '#00ff9f',
-              cursor: 'pointer',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
               padding: '3px 10px',
               fontSize: '10px',
               fontFamily: 'JetBrains Mono, monospace',
@@ -564,11 +570,16 @@ export default function ThreatFeed() {
               alignItems: 'center',
               gap: '5px',
               transition: 'all 0.15s',
+              opacity: refreshing ? 0.7 : 1,
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,255,159,0.08)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+            onMouseEnter={e => !refreshing && (e.currentTarget.style.background = 'rgba(0,255,159,0.08)')}
+            onMouseLeave={e => !refreshing && (e.currentTarget.style.background = 'transparent')}
           >
-            ↻ Refresh
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00ff9f" strokeWidth="2.5" strokeLinecap="round"
+              style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none', flexShrink: 0 }}>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            {refreshing ? 'Refreshing...' : 'Refresh'}
           </button>
           <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>
             {lastUpdated ? `updated ${lastUpdated}` : ''}
@@ -793,6 +804,7 @@ export default function ThreatFeed() {
         @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { to { transform: rotate(360deg) } }
         ::-webkit-scrollbar { width: 2px; }
         ::-webkit-scrollbar-thumb { background: rgba(0,255,159,0.15); border-radius: 1px; }
       `}</style>

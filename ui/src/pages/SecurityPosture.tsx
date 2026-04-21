@@ -229,7 +229,8 @@ export default function SecurityPosture() {
           <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: backendLive ? '#00ff9f' : '#ff9f0a', animation: backendLive ? 'liveBlink 1.4s infinite' : 'none' }} />
           {sourceBadge}
         </span>
-        <button onClick={refresh} disabled={loading} style={{ marginLeft: 'auto', padding: '6px 12px', background: loading ? 'rgba(255,255,255,0.05)' : 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: '6px', color: '#00d4ff', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace', cursor: loading ? 'not-allowed' : 'pointer' }}>
+        <button onClick={refresh} disabled={loading} style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: loading ? 'rgba(0,212,255,0.06)' : 'rgba(0,212,255,0.1)', border: '1px solid rgba(0,212,255,0.3)', borderRadius: '6px', color: '#00d4ff', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, transition: 'all 0.15s' }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" strokeWidth="2.5" strokeLinecap="round" style={{ animation: loading ? 'spin 0.7s linear infinite' : 'none', flexShrink: 0 }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
           {loading ? 'Refreshing...' : 'Refresh backend'}
         </button>
       </div>

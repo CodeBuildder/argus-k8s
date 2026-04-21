@@ -66,6 +66,7 @@ export default function ApprovalQueue() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [pending, setPending] = useState<ApprovalEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [acting, setActing] = useState<Record<string, 'approving' | 'rejecting'>>({})
   const [done, setDone] = useState<Record<string, 'approved' | 'rejected'>>({})
   const [lastRefresh, setLastRefresh] = useState('')
@@ -81,6 +82,12 @@ export default function ApprovalQueue() {
       }
     } catch {}
     setLoading(false)
+  }
+
+  const manualRefresh = async () => {
+    setRefreshing(true)
+    await fetchQueue()
+    setRefreshing(false)
   }
 
   useEffect(() => {
@@ -148,6 +155,7 @@ export default function ApprovalQueue() {
       <style>{`
         @keyframes fadeInUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
         @keyframes glowpulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        @keyframes spin { to { transform: rotate(360deg) } }
         @keyframes approveExit {
           0% { opacity: 1; max-height: 220px; transform: translateX(0) scale(1); }
           35% { background: rgba(0,255,159,0.1); }
@@ -176,16 +184,22 @@ export default function ApprovalQueue() {
         <button
           onClick={simulateApproval}
           disabled={simulating}
-          style={{ background: 'rgba(188,140,255,0.08)', border: '1px solid rgba(188,140,255,0.25)', borderRadius: '6px', color: '#bc8cff', cursor: simulating ? 'not-allowed' : 'pointer', padding: '3px 10px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: simulating ? 'rgba(188,140,255,0.14)' : 'rgba(188,140,255,0.08)', border: '1px solid rgba(188,140,255,0.25)', borderRadius: '6px', color: '#bc8cff', cursor: simulating ? 'not-allowed' : 'pointer', padding: '3px 10px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace', transition: 'all 0.15s' }}
         >
+          {simulating ? (
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#bc8cff" strokeWidth="2.5" strokeLinecap="round" style={{ animation: 'spin 0.7s linear infinite', flexShrink: 0 }}><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+          ) : (
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#bc8cff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v4l3-3m-3 3-3-3"/><circle cx="12" cy="12" r="9" strokeDasharray="4 2"/></svg>
+          )}
           {simulating ? 'Queuing...' : 'Simulate approval'}
         </button>
         <button
-          onClick={fetchQueue}
-          style={{ background: 'transparent', border: '1px solid rgba(0,255,159,0.2)', borderRadius: '6px', color: '#00ff9f', cursor: 'pointer', padding: '3px 10px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          onClick={manualRefresh}
+          disabled={refreshing}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: refreshing ? 'rgba(0,255,159,0.06)' : 'transparent', border: '1px solid rgba(0,255,159,0.2)', borderRadius: '6px', color: '#00ff9f', cursor: refreshing ? 'not-allowed' : 'pointer', padding: '3px 10px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace', transition: 'all 0.15s', opacity: refreshing ? 0.7 : 1 }}
         >
-          <RefreshCw size={11} />
-          Refresh
+          <RefreshCw size={11} style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none' } as React.CSSProperties} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>
 
