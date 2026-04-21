@@ -5,7 +5,7 @@ Accepted
 
 ## Context
 Need log aggregation for pod logs and Falco alert stream. Must run alongside
-Prometheus, Grafana, Cilium, Falco, and the AI agent on a 3-node laptop cluster
+Prometheus, Grafana, Cilium, Falco, and the detection agent on a 3-node laptop cluster
 without exhausting available RAM.
 
 ## Decision

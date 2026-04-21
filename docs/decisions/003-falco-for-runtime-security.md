@@ -5,8 +5,8 @@ Accepted
 
 ## Context
 Need a runtime security tool that detects suspicious behavior inside running containers
-at the syscall level — not just static image scanning. Output must be machine-readable
-for the AI agent to consume.
+at the syscall level — not just static image scanning. Output must be structured and
+machine-readable so the detection agent can process it programmatically.
 
 ## Decision
 Use Falco deployed via Helm in eBPF mode with JSON webhook output.
@@ -27,7 +27,7 @@ Use Falco deployed via Helm in eBPF mode with JSON webhook output.
 - KubeArmor: LSM-based enforcement, interesting but niche — limited docs for ARM64
 
 ## Consequences
-Falco emits high volume of events — agent must implement alert deduplication and
-suppression logic to avoid Claude API cost explosion.
+Falco emits a high volume of events — the agent must implement alert deduplication and
+suppression logic to avoid processing the same alert repeatedly.
 Custom rules should be maintained in security/falco/custom-rules.yaml, not modified
 in the default ruleset.
