@@ -45,6 +45,4 @@ kubectl run test-crypto --image=alpine --restart=Never -- sh -c "echo 'xmrig' > 
 sleep 2
 kubectl delete pod test-crypto --ignore-not-found 2>/dev/null
 
-echo "✅ Test threats triggered. Check Argus UI for detections!"
-
-# Made with Bob
+echo "Test threats triggered. Check Argus UI for detections!"

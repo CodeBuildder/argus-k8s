@@ -221,7 +221,12 @@ export default function InfraObservability() {
             <Metric label="Total Events" value={auditLogs.length} color="#00d4ff" activity={auditLogs.map((_, i) => auditLogs.length - i).slice(0, 12)} />
             <Metric label="Success" value={auditLogs.filter(l => l.status === 200).length} color="#00ff9f" activity={auditLogs.slice(0, 12).map(l => l.status === 200 ? 1 : 0)} />
             <Metric label="Denied" value={auditLogs.filter(l => l.status === 403).length} color="#ff2d55" activity={auditLogs.slice(0, 12).map(l => l.status === 403 ? 1 : 0)} />
-            <Metric label="Rate" value={`${(auditLogs.length / 60).toFixed(1)}/s`} color="#bc8cff" activity={auditLogs.slice(0, 12).map((_, i) => Math.max(1, 12 - i))} />
+            <Metric
+              label="Rate"
+              value={`${(auditLogs.length / 60).toFixed(1)}/s`}
+              color="#bc8cff"
+              activity={auditLogs.slice(0, 12).map(() => auditLogs.length / 60)}
+            />
           </div>
 
           <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
@@ -255,6 +260,7 @@ export default function InfraObservability() {
 function Metric({ label, value, color, activity = [] }: { label: string; value: string | number; color: string; activity?: number[] }) {
   const points = activity.slice(-16)
   const max = Math.max(...points, 1)
+  const hasActivity = points.some(point => point > 0)
   return (
     <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '8px', padding: '12px', minHeight: '96px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <div style={{ fontSize: '8px', color: '#4a5568', marginBottom: '4px' }}>{label}</div>
@@ -266,10 +272,10 @@ function Metric({ label, value, color, activity = [] }: { label: string; value: 
             style={{
               flex: 1,
               minWidth: '4px',
-              height: `${Math.max(12, (point / max) * 100)}%`,
+              height: point <= 0 ? '0%' : `${Math.max(4, (point / max) * 100)}%`,
               borderRadius: '999px',
               background: `linear-gradient(180deg, ${color}, rgba(255,255,255,0.12))`,
-              opacity: idx === points.length - 1 ? 1 : 0.45,
+              opacity: hasActivity ? (idx === points.length - 1 ? 1 : 0.45) : 0.18,
               transition: 'height 400ms ease, opacity 400ms ease',
             }}
           />

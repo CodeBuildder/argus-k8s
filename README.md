@@ -10,6 +10,27 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 > A Kubernetes security platform combining eBPF-native threat detection,
 > policy enforcement, and an automated reasoning agent for real-time threat response.
 
+## Demo media
+
+Store README showcase assets in `docs/media/`.
+
+- Banner GIF: `docs/media/banner.gif`
+- Demo video: `docs/media/demo.mp4`
+
+Recommended README usage:
+
+```md
+![Argus banner](docs/media/banner.gif)
+
+[Watch the full demo video](docs/media/demo.mp4)
+```
+
+Notes:
+
+- Use the GIF for the top banner because GitHub renders it inline reliably.
+- Keep the MP4 in the same `docs/media/` folder and link to it from the README.
+- If you want an embedded playable video on GitHub, upload the MP4 through a GitHub issue/PR comment and paste the generated hosted URL into the README instead of a local repo path.
+
 ## Cluster status
 
 ### Network flow observability

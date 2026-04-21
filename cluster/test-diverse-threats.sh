@@ -191,5 +191,3 @@ echo "  kubectl get pods -l 'threat-type'"
 echo ""
 echo "To clean up all threat pods:"
 echo "  kubectl delete pods -l 'threat-type' --force --grace-period=0"
-
-# Made with Bob

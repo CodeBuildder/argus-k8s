@@ -232,7 +232,7 @@ export default function ThreatHunting() {
         </div>
 
         <div style={{ fontSize: '8px', color: '#4a5568', marginBottom: '8px' }}>
-          💡 Powered by Claude • Queries Hubble, Loki, and Kubernetes API
+          Queries Hubble, Loki, and Kubernetes API
         </div>
 
         {/* Example Queries */}
@@ -282,7 +282,7 @@ export default function ThreatHunting() {
                 animation: 'spin 1s linear infinite'
               }} />
               <div style={{ fontSize: '10px', color: '#8892a4' }}>
-                Claude is analyzing your query and translating to system queries...
+                Analyzing your query and translating to system queries...
               </div>
               <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             </div>
@@ -299,7 +299,7 @@ export default function ThreatHunting() {
               <div style={{ fontSize: '48px' }}>🔍</div>
               <div style={{ fontSize: '11px', textAlign: 'center' }}>
                 Enter a natural language query to hunt for threats<br/>
-                <span style={{ fontSize: '9px', color: '#5a6478' }}>Claude will translate it to the appropriate system queries</span>
+                <span style={{ fontSize: '9px', color: '#5a6478' }}>Natural language queries are translated to Hubble, Loki, and Kubernetes API calls</span>
               </div>
             </div>
           )}
@@ -435,4 +435,3 @@ export default function ThreatHunting() {
   )
 }
 
-// Made with Bob

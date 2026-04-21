@@ -169,7 +169,7 @@ function KPI({ label, value, color, sublabel, history }: { label: string; value:
                 key={`${label}-${idx}`}
                 className="flex-1 rounded-sm transition-all duration-500"
                 style={{
-                  height: `${Math.max(3, Math.round((point / max) * 10))}px`,
+                  height: point <= 0 ? '0px' : `${Math.max(1, Math.round((point / max) * 10))}px`,
                   background: idx === history.length - 1 ? color : `${color}66`,
                   boxShadow: idx === history.length - 1 ? `0 0 8px ${color}44` : 'none',
                 }}
