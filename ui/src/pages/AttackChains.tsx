@@ -48,6 +48,7 @@ export default function AttackChains() {
   const [chains, setChains] = React.useState<AttackChain[]>([])
   const [selected, setSelected] = React.useState<AttackChain | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [simulating, setSimulating] = React.useState(false)
 
   const fetchChains = async () => {
     try {
@@ -68,6 +69,20 @@ export default function AttackChains() {
     return () => clearInterval(t)
   }, [])
 
+  const simulateChain = async () => {
+    setSimulating(true)
+    try {
+      await fetch('/api/simulate-threats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario: 'attack_chain', count: 5 }),
+      })
+      await fetchChains()
+    } finally {
+      setSimulating(false)
+    }
+  }
+
   const fmt = (ts: number) => {
     const diff = Math.floor((Date.now() - ts * 1000) / 1000)
     if (diff < 60) return `${diff}s ago`
@@ -85,7 +100,11 @@ export default function AttackChains() {
       <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(0,255,159,0.1)', display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         <span style={{ fontSize: '9px', color: '#8b949e', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace' }}>⛓ Attack chains</span>
         <span style={{ fontSize: '9px', color: '#4a5568', marginLeft: 'auto' }}>{chains.length} chains detected</span>
+        <button onClick={simulateChain} disabled={simulating} style={{ background: 'rgba(255,45,85,0.08)', border: '1px solid rgba(255,45,85,0.25)', borderRadius: '5px', color: '#ff2d55', cursor: simulating ? 'not-allowed' : 'pointer', padding: '2px 8px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace' }}>{simulating ? 'Injecting...' : 'Trigger chain'}</button>
         <button onClick={fetchChains} style={{ background: 'transparent', border: '1px solid rgba(0,255,159,0.2)', borderRadius: '5px', color: '#00ff9f', cursor: 'pointer', padding: '2px 8px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace' }}>↻</button>
+      </div>
+      <div style={{ padding: '8px 14px', borderBottom: '1px solid rgba(0,255,159,0.04)', background: 'rgba(0,255,159,0.02)', fontSize: '10px', color: '#5a6478', lineHeight: 1.5 }}>
+        Correlates related alerts into one attacker path so you can see how activity progressed across stages.
       </div>
 
       <div style={{ flex: 1, display: 'grid', gridTemplateColumns: selected ? '1fr 420px' : '1fr', overflow: 'hidden' }}>
@@ -96,6 +115,9 @@ export default function AttackChains() {
               <div style={{ fontSize: '24px', marginBottom: '8px', opacity: 0.3 }}>⛓</div>
               <div style={{ marginBottom: '4px' }}>No attack chains detected yet.</div>
               <div style={{ fontSize: '9px' }}>Chains form when 2+ related alerts fire within 30 minutes.</div>
+              <button onClick={simulateChain} disabled={simulating} style={{ marginTop: '14px', background: 'rgba(255,45,85,0.08)', border: '1px solid rgba(255,45,85,0.25)', borderRadius: '6px', color: '#ff2d55', cursor: simulating ? 'not-allowed' : 'pointer', padding: '7px 12px', fontSize: '9px', fontFamily: 'JetBrains Mono, monospace' }}>
+                {simulating ? 'Injecting chain...' : 'Trigger attack chain'}
+              </button>
             </div>
           )}
           {chains.map(chain => (

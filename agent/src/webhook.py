@@ -17,6 +17,8 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, field_validator
 import structlog
 
+from config import config as app_config
+
 log = structlog.get_logger()
 
 router = APIRouter()
@@ -26,7 +28,7 @@ router = APIRouter()
 dedup_cache: dict[str, float] = {}
 
 # Default suppression window in seconds
-DEDUP_WINDOW_SECONDS = 300  # 5 minutes
+DEDUP_WINDOW_SECONDS = app_config.DEDUP_WINDOW_SECONDS
 
 
 class Priority(str, Enum):

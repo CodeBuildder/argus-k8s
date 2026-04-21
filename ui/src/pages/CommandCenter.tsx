@@ -13,10 +13,32 @@ interface Stats {
 interface Incident {
   id: string; ts: number; rule: string; severity: string
   namespace: string; hostname: string; action_taken: string; confidence: number
+  kyverno_blocked?: boolean
+  enrichment_sources?: string[]
+}
+
+interface NodeTelemetry {
+  name: string
+  ip: string
+  pods: number
+  cpu: number
+  mem: number
+  rx: number
+  tx: number
+  lastSeen: number
+  recent_incidents?: number
 }
 
 interface Particle {
-  id: string; incident: Incident; currentSegment: number; targetSegment: number; color: string; animKey: number; blocked?: boolean
+  id: string; incident: Incident; currentSegment: number; targetSegment: number; color: string; animKey: number; blocked?: boolean; startedAt: number
+}
+
+interface LayerBurst {
+  id: string; layer: number; label: string; color: string; severity: string; ts: number
+}
+
+interface ArgusEvent {
+  id: string; layer: string; action: string; rule: string; color: string; ts: number
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -26,79 +48,38 @@ const SEV_COLOR: Record<string, string> = {
 }
 
 const SEV_PARTICLE: Record<string, { size: number; clip?: string; br: string }> = {
-  CRITICAL: { size: 10, clip: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', br: '0' },
-  HIGH:     { size: 8,  br: '50%' },
-  MED:      { size: 7,  br: '3px' },
-  MEDIUM:   { size: 7,  br: '3px' },
-  LOW:      { size: 5,  br: '50%' },
+  CRITICAL: { size: 9, clip: 'polygon(50% 0%,100% 50%,50% 100%,0% 50%)', br: '0' },
+  HIGH:     { size: 7, br: '50%' },
+  MED:      { size: 6, br: '3px' },
+  MEDIUM:   { size: 6, br: '3px' },
+  LOW:      { size: 5, br: '50%' },
 }
 
 const LAYERS = [
-  { name: 'Falco',    sub: 'Runtime Detection',  color: '#ff9f0a', icon: '🔍', desc: 'Syscall-level detection via eBPF. Shell spawns, file reads, privilege escalation.',  m1: 'Events',      m2: 'Blocked',    activity: 78, label: 'Layer 1' },
-  { name: 'eBPF',     sub: 'Kernel Layer',        color: '#58a6ff', icon: '⚡', desc: 'CO-RE kernel instrumentation. Raw syscalls before userspace.',                       m1: 'Flows',       m2: 'Dropped',    activity: 91, label: 'Layer 2' },
-  { name: 'Kyverno',  sub: 'Admission Control',   color: '#bc8cff', icon: '🛡', desc: 'Policy-as-code admission webhooks. Rejects non-compliant workloads.',                m1: 'Policies',    m2: 'Violations', activity: 34, label: 'Layer 3' },
-  { name: 'Cilium',   sub: 'Network Layer',       color: '#00ff9f', icon: '🌐', desc: 'L3/L4/L7 zero-trust. Default-deny with explicit allow, all flows in Hubble.',       m1: 'Connections', m2: 'Denied',     activity: 65, label: 'Layer 4' },
-  { name: 'Argus AI', sub: 'AI Analysis',         color: '#00d4ff', icon: '🧠', desc: 'Claude reasoning layer. Enriches context, scores blast radius, routes actions.',     m1: 'Decisions',   m2: 'Auto-fixed', activity: 55, label: 'Layer 5' },
+  { name: 'Kyverno', sub: 'Admission Gate',    color: '#bc8cff', desc: 'API server admission check. Rejects bad manifests before a pod is scheduled.',             m1: 'Policies',    m2: 'Rejected', activity: 34, label: 'Gate' },
+  { name: 'eBPF',    sub: 'Kernel Layer',      color: '#58a6ff', desc: 'Kernel probes see syscalls, process exec, file access, and memory/module behavior.',      m1: 'Syscalls',    m2: 'Denied',   activity: 91, label: 'Kernel' },
+  { name: 'Falco',   sub: 'Runtime Rules',     color: '#ff9f0a', desc: 'Falco turns kernel events into runtime detections: shells, token reads, drift.',          m1: 'Events',      m2: 'Actions',  activity: 78, label: 'Runtime' },
+  { name: 'Cilium',  sub: 'Network Datapath',  color: '#00ff9f', desc: 'eBPF networking enforces DNS, L3/L4/L7 policy, C2 egress, Tor, and lateral movement.',  m1: 'Connections', m2: 'Dropped',  activity: 65, label: 'Network' },
 ]
+
+const ARGUS_ANALYSIS = {
+  name: 'Argus AI',
+  color: '#00d4ff',
+  desc: 'Receives telemetry after detection, enriches context, explains blast radius, and routes the response. It is not an inline threat hop.',
+}
 
 // CSS keyframe per layer color — soft bright glow, red on threat hit (longer duration)
 const LAYER_GLOW_CSS = LAYERS.map((l, i) => `
   @keyframes layerGlow${i} {
-    0%,100% { box-shadow: 0 8px 24px ${l.color}35, 0 0 48px ${l.color}20, inset 0 1px 0 ${l.color}25; border-color: ${l.color}60; }
-    50%     { box-shadow: 0 12px 40px ${l.color}55, 0 0 72px ${l.color}35, inset 0 2px 0 ${l.color}45; border-color: ${l.color}90; }
+    0%,100% { box-shadow: 0 8px 22px ${l.color}20, inset 0 1px 0 ${l.color}20; border-color: ${l.color}45; }
+    50%     { box-shadow: 0 10px 28px ${l.color}2e, inset 0 1px 0 ${l.color}30; border-color: ${l.color}65; }
   }
   @keyframes layerHit${i} {
-    0%   { box-shadow: 0 8px 24px ${l.color}35, 0 0 48px ${l.color}20, inset 0 1px 0 ${l.color}25; border-color: ${l.color}60; transform: scale(1); }
-    20%  { box-shadow: 0 0 60px #ff2d5595, 0 0 100px #ff2d5560, 0 0 140px #ff2d5530, inset 0 2px 0 #ff2d5570; border-color: #ff2d55; transform: scale(1.03); }
-    100% { box-shadow: 0 8px 24px ${l.color}35, 0 0 48px ${l.color}20, inset 0 1px 0 ${l.color}25; border-color: ${l.color}60; transform: scale(1); }
+    0%   { box-shadow: 0 8px 22px ${l.color}20, inset 0 1px 0 ${l.color}20; border-color: ${l.color}45; transform: scale(1); }
+    20%  { box-shadow: 0 12px 34px ${l.color}45, inset 0 2px 0 ${l.color}45; border-color: ${l.color}; transform: scale(1.008); }
+    100% { box-shadow: 0 8px 22px ${l.color}20, inset 0 1px 0 ${l.color}20; border-color: ${l.color}45; transform: scale(1); }
   }
 `).join('')
-
-const MOCK_INCIDENTS: Incident[] = [
-  { id: 'm1',  ts: Date.now()/1000-30,  rule: 'Shell Spawned in Container',                severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.92 },
-  { id: 'm2',  ts: Date.now()/1000-80,  rule: 'Outbound Connection to Rare External IP',   severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'NOTIFY',         confidence: 0.77 },
-  { id: 'm3',  ts: Date.now()/1000-140, rule: 'Sensitive File Read — /etc/shadow',          severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'ISOLATE',        confidence: 0.84 },
-  { id: 'm4',  ts: Date.now()/1000-210, rule: 'Kyverno: Disallowed Image Registry',         severity: 'MED',      namespace: 'kube-system', hostname: 'k3s-worker1', action_taken: 'LOG',            confidence: 0.65 },
-  { id: 'm5',  ts: Date.now()/1000-290, rule: 'Privilege Escalation — sudo Execution',      severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker2', action_taken: 'HUMAN_REQUIRED', confidence: 0.71 },
-  { id: 'm6',  ts: Date.now()/1000-370, rule: 'Cilium Egress Policy Blocked',               severity: 'LOW',      namespace: 'monitoring',  hostname: 'k3s-master',  action_taken: 'LOG',            confidence: 0.45 },
-  { id: 'm7',  ts: Date.now()/1000-440, rule: 'Unexpected DNS Exfil Pattern',               severity: 'MED',      namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'NOTIFY',         confidence: 0.58 },
-  { id: 'm8',  ts: Date.now()/1000-510, rule: 'Image from Unregistered Registry',           severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.88 },
-  { id: 'm9',  ts: Date.now()/1000-590, rule: 'Write Below Binary Dir (/usr/bin)',           severity: 'CRITICAL', namespace: 'default',     hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.95 },
-  { id: 'm10', ts: Date.now()/1000-650, rule: 'K8s Service Account Token Mount',            severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.73 },
-]
-
-// Diverse threat types across all detection layers
-const MOCK_POOL: Omit<Incident, 'id' | 'ts'>[] = [
-  // Layer 1: Falco Runtime Detection
-  { rule: 'Shell Spawned in Container',                    severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.93 },
-  { rule: 'Privilege Escalation via SUID Binary',          severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker2', action_taken: 'HUMAN_REQUIRED', confidence: 0.68 },
-  { rule: 'Crypto Miner Process Detected (xmrig)',         severity: 'CRITICAL', namespace: 'default',     hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.97 },
-  { rule: 'Sensitive File Read — /etc/shadow',             severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.76 },
-  { rule: 'Write Below Binary Dir (/usr/bin)',             severity: 'CRITICAL', namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'KILL',           confidence: 0.95 },
-  { rule: 'Container Drift — Binary Modified',             severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'ISOLATE',        confidence: 0.82 },
-  { rule: 'Reverse Shell Connection Established',          severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker2', action_taken: 'KILL',           confidence: 0.91 },
-  { rule: 'Suspicious Kernel Module Load',                 severity: 'HIGH',     namespace: 'kube-system', hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.74 },
-  
-  // Layer 2: eBPF Kernel Detection
-  { rule: 'eBPF: Syscall Injection Attempt',               severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'KILL',           confidence: 0.88 },
-  { rule: 'Kernel Memory Access Violation',                severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.79 },
-  
-  // Layer 3: Kyverno Admission Control
-  { rule: 'Kyverno: Privileged Pod Rejected',              severity: 'MED',      namespace: 'kube-system', hostname: 'k3s-worker1', action_taken: 'LOG',            confidence: 0.62 },
-  { rule: 'Kyverno: Disallowed Image Registry',            severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-master',  action_taken: 'HUMAN_REQUIRED', confidence: 0.77 },
-  { rule: 'Kyverno: Host Path Mount Blocked',              severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'LOG',            confidence: 0.85 },
-  { rule: 'Kyverno: Root User Container Rejected',         severity: 'MED',      namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'LOG',            confidence: 0.71 },
-  
-  // Layer 4: Cilium Network Detection
-  { rule: 'Outbound C2 Callback Detected',                 severity: 'CRITICAL', namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.89 },
-  { rule: 'Unexpected DNS Lookup (data.exfil.io)',         severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'NOTIFY',         confidence: 0.81 },
-  { rule: 'Network Port Scan from Pod',                    severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-worker2', action_taken: 'ISOLATE',        confidence: 0.79 },
-  { rule: 'Cilium: Lateral Movement Detected',             severity: 'CRITICAL', namespace: 'production',  hostname: 'k3s-worker1', action_taken: 'ISOLATE',        confidence: 0.94 },
-  { rule: 'Cilium: Egress to Tor Exit Node',               severity: 'HIGH',     namespace: 'production',  hostname: 'k3s-worker2', action_taken: 'NOTIFY',         confidence: 0.86 },
-  { rule: 'Cilium: DNS Tunneling Detected',                severity: 'HIGH',     namespace: 'staging',     hostname: 'k3s-worker1', action_taken: 'ISOLATE',        confidence: 0.83 },
-  { rule: 'Cilium: Unauthorized Service Mesh Access',      severity: 'MED',      namespace: 'production',  hostname: 'k3s-master',  action_taken: 'NOTIFY',         confidence: 0.67 },
-  { rule: 'Network Connection to Known Malicious IP',      severity: 'CRITICAL', namespace: 'default',     hostname: 'k3s-worker2', action_taken: 'KILL',           confidence: 0.96 },
-]
 
 type NotifyChannel = { id: 'slack' | 'pagerduty' | 'email'; color: string }
 
@@ -161,17 +142,17 @@ function ActionBadge({ action }: { action: string }) {
   if (action === 'HUMAN_REQUIRED') {
     return (
       <span style={{
-        display: 'inline-flex', alignItems: 'center', gap: '4px',
-        padding: '2px 7px', borderRadius: '4px',
-        background: 'rgba(255,107,53,0.1)', border: '1px solid rgba(255,107,53,0.35)',
-        fontSize: '8px', fontWeight: 700, color: '#ff6b35',
-        fontFamily: 'Inter, sans-serif', flexShrink: 0, letterSpacing: '0.2px',
+        display: 'inline-flex', alignItems: 'center', gap: '5px',
+        padding: '3px 9px', borderRadius: '5px',
+        background: 'rgba(255,107,53,0.12)', border: '1px solid rgba(255,107,53,0.4)',
+        fontSize: '9px', fontWeight: 700, color: '#ff6b35',
+        fontFamily: 'Inter, sans-serif', flexShrink: 0, letterSpacing: '0.3px',
       }}>
-        <svg width="9" height="10" viewBox="0 0 9 10" fill="none" stroke="#ff6b35" strokeWidth="1.4">
+        <svg width="10" height="11" viewBox="0 0 9 10" fill="none" stroke="#ff6b35" strokeWidth="1.5">
           <circle cx="4.5" cy="3" r="2"/>
           <path d="M1 9c0-1.9 1.6-3.5 3.5-3.5S8 7.1 8 9" strokeLinecap="round"/>
         </svg>
-        Review Required
+        Awaiting Security Review
       </span>
     )
   }
@@ -204,30 +185,61 @@ function getThreatPath(inc: Incident): { start: number; end: number; blocked: bo
     return {
       start: (inc as any).detection_layer,
       end: (inc as any).target_layer,
-      blocked: false
+      blocked: isHandledAtLayer(inc)
     }
   }
-  
-  // Fallback: detect layer from rule name (for demo mode)
+
+  // Fallback: infer layer from backend rule names when explicit layer fields are absent.
   const r = inc.rule.toLowerCase()
-  let start = 0
-  let blocked = false
-  
-  if (r.includes('cilium') || r.includes('network') || r.includes('dns') ||
+  let layer = 2
+
+  if (inc.kyverno_blocked || r.includes('kyverno') || r.includes('admission') || r.includes('policy') ||
+      r.includes('registry') || r.includes('privileged') || r.includes('rejected') ||
+      r.includes('disallowed')) {
+    layer = 0
+  } else if (r.includes('ebpf') || r.includes('kernel') || r.includes('syscall') || r.includes('memory') || r.includes('module')) {
+    layer = 1
+  } else if (r.includes('cilium') || r.includes('network') || r.includes('dns') ||
       r.includes('egress') || r.includes('c2') || r.includes('lateral') ||
       r.includes('port scan') || r.includes('connection')) {
-    start = 3
-  } else if (r.includes('kyverno') || r.includes('admission') || r.includes('policy') ||
-             r.includes('registry') || r.includes('privileged') || r.includes('rejected') ||
-             r.includes('blocked') || r.includes('disallowed')) {
-    start = 2
-    blocked = true  // Kyverno blocks at admission
-  } else if (r.includes('ebpf') || r.includes('kernel') || r.includes('syscall')) {
-    start = 1
+    layer = 3
   }
-  
-  // Blocked threats stay at their layer, others flow to Layer 4
-  return { start, end: blocked ? start : 3, blocked }
+
+  const start = Math.max(0, layer - 1)
+  const blocked = isHandledAtLayer(inc)
+
+  return { start, end: layer, blocked }
+}
+
+function isHandledAtLayer(inc: Incident): boolean {
+  const r = inc.rule.toLowerCase()
+  return Boolean(
+    inc.kyverno_blocked ||
+    inc.action_taken === 'KILL' ||
+    inc.action_taken === 'ISOLATE' ||
+    r.includes('blocked') ||
+    r.includes('rejected') ||
+    r.includes('denied')
+  )
+}
+
+function actionLabel(inc: Incident): string {
+  const layer = getThreatPath(inc).end
+  if (inc.kyverno_blocked) return 'API DENIED'
+  if (inc.action_taken === 'KILL') return layer === 3 ? 'FLOW KILLED' : 'PROCESS KILLED'
+  if (inc.action_taken === 'ISOLATE') return layer === 3 ? 'FLOW DROPPED' : 'POD ISOLATED'
+  if (inc.action_taken === 'HUMAN_REQUIRED') return 'REVIEW QUEUED'
+  if (inc.action_taken === 'NOTIFY') return 'ALERT SENT'
+  return layer === 0 ? 'API CHECKED' : layer === 3 ? 'FLOW OBSERVED' : 'DETECTED'
+}
+
+function signalLabel(inc: Incident): string {
+  const path = getThreatPath(inc)
+  if (path.end === 0) return 'api request'
+  if (path.end === 1) return 'syscall'
+  if (path.end === 2) return 'kernel event'
+  if (path.end === 3) return 'network flow'
+  return 'telemetry'
 }
 
 // ─── Detection Pipeline ───────────────────────────────────────────────────────
@@ -235,37 +247,56 @@ function getThreatPath(inc: Incident): { start: number; end: number; blocked: bo
 function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
   const navigate = useNavigate()
   const [particles, setParticles] = useState<Particle[]>([])
+  const [bursts, setBursts] = useState<LayerBurst[]>([])
+  const [argusEvents, setArgusEvents] = useState<ArgusEvent[]>([])
   const [hover, setHover] = useState<{ particle: Particle; x: number; y: number } | null>(null)
-  const [layerStats, setLayerStats] = useState(() =>
-    LAYERS.map(() => ({ v1: 0, v2: 0, rate: 0 }))
-  )
   const [layerHits, setLayerHits] = useState<Record<number, number>>({})
   const seenIds = useRef(new Set<string>())
-
-  // Live-updating layer metrics
-  useEffect(() => {
-    const refresh = () => {
-      setLayerStats([
-        { v1: Math.floor(Math.random() * 50) + 100,   v2: Math.floor(Math.random() * 10) + 5,  rate: Math.random() * 20 + 10 },
-        { v1: Math.floor(Math.random() * 1000) + 5000, v2: Math.floor(Math.random() * 50) + 20, rate: Math.random() * 100 + 200 },
-        { v1: 12,                                       v2: Math.floor(Math.random() * 5) + 2,   rate: Math.random() * 5 + 2 },
-        { v1: Math.floor(Math.random() * 2000) + 10000,v2: Math.floor(Math.random() * 30) + 10, rate: Math.random() * 150 + 300 },
-        { v1: Math.floor(Math.random() * 20) + 50,     v2: Math.floor(Math.random() * 8) + 3,   rate: Math.random() * 3 + 1 },
-      ])
+  const now = Date.now()
+  const recent = incidents.filter(inc => now - inc.ts * 1000 < 60 * 60 * 1000)
+  const handled = (inc: Incident) => inc.kyverno_blocked || inc.action_taken === 'KILL' || inc.action_taken === 'ISOLATE'
+  const layerStats = LAYERS.map((_, idx) => {
+    const layerEvents = recent.filter(inc => getThreatPath(inc).end === idx)
+    const handledEvents = layerEvents.filter(handled)
+    const newest = layerEvents[0]
+    const ageSeconds = newest ? Math.max(1, Math.floor((now - newest.ts * 1000) / 1000)) : 0
+    return {
+      v1: layerEvents.length,
+      v2: handledEvents.length,
+      rate: newest ? Math.min(99, 60 / ageSeconds) : 0,
     }
-    refresh()
-    const t = setInterval(refresh, 3000)
-    return () => clearInterval(t)
-  }, [])
+  })
 
   // Inject new incidents as particles using backend-provided or detected layers
   useEffect(() => {
-    const newIncs = incidents.filter(inc => !seenIds.current.has(inc.id))
+    const newIncs = incidents.filter(inc => !seenIds.current.has(inc.id)).slice(0, 2)
     if (!newIncs.length) return
-    newIncs.forEach(inc => seenIds.current.add(inc.id))
     setParticles(prev => {
-      const newParticles = newIncs.map(inc => {
+      const openSlots = Math.max(0, 2 - prev.length)
+      const animating = newIncs.slice(0, openSlots)
+      const newParticles = animating.flatMap(inc => {
+        seenIds.current.add(inc.id)
         const { start, end, blocked } = getThreatPath(inc)
+        const layer = LAYERS[end]
+        setLayerHits(prevHits => ({ ...prevHits, [end]: Date.now() }))
+        if (end === 0) {
+          setArgusEvents(prevEvents => [
+            {
+              id: `${inc.id}-${Date.now()}`,
+              layer: layer?.name || 'Layer',
+              action: actionLabel(inc),
+              rule: inc.rule,
+              color: layer?.color || SEV_COLOR[inc.severity] || '#00d4ff',
+              ts: Date.now(),
+            },
+            ...prevEvents,
+          ].slice(0, 1))
+          setBursts(prevBursts => [
+            ...prevBursts,
+            { id: `${inc.id}-${Date.now()}`, layer: end, label: actionLabel(inc), color: SEV_COLOR[inc.severity] || '#8b949e', severity: inc.severity, ts: Date.now() },
+          ].slice(-3))
+        }
+        if (end === 0 && blocked) return []
         return {
           id: inc.id, incident: inc,
           currentSegment: start,
@@ -273,26 +304,69 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
           color: SEV_COLOR[inc.severity] || '#8b949e',
           animKey: 0,
           blocked,
+          startedAt: Date.now(),
         }
       })
-      return [...prev, ...newParticles].slice(-20)
+      return [...prev, ...newParticles].slice(-2)
     })
   }, [incidents])
+
+  useEffect(() => {
+    if (!bursts.length) return
+    const t = setTimeout(() => {
+      setBursts(prev => prev.filter(b => Date.now() - b.ts < 2100))
+    }, 2200)
+    return () => clearTimeout(t)
+  }, [bursts])
+
+  useEffect(() => {
+    if (!argusEvents.length) return
+    const t = setTimeout(() => {
+      setArgusEvents(prev => prev.filter(event => Date.now() - event.ts < 60_000).slice(0, 1))
+    }, 1000)
+    return () => clearTimeout(t)
+  }, [argusEvents])
 
   const handleAnimEnd = (pid: string, seg: number) => {
     setParticles(prev => {
       const particle = prev.find(p => p.id === pid)
       if (!particle) return prev
-      
-      // Check if reached target
-      if (seg >= particle.targetSegment) {
+
+      // Connector index is the hop before a layer, so reaching target means finishing target - 1.
+      if (seg >= particle.targetSegment - 1) {
+        setLayerHits(prevHits => ({ ...prevHits, [particle.targetSegment]: Date.now() }))
+        const targetLayer = LAYERS[particle.targetSegment]
+        setArgusEvents(prevEvents => [
+          {
+            id: `${particle.id}-${Date.now()}`,
+            layer: targetLayer?.name || 'Layer',
+            action: actionLabel(particle.incident),
+            rule: particle.incident.rule,
+            color: targetLayer?.color || particle.color,
+            ts: Date.now(),
+          },
+          ...prevEvents,
+        ].slice(0, 1))
+        if (isHandledAtLayer(particle.incident)) {
+          setBursts(prevBursts => [
+            ...prevBursts,
+            {
+              id: `${particle.id}-${Date.now()}`,
+              layer: particle.targetSegment,
+              label: actionLabel(particle.incident),
+              color: particle.color,
+              severity: particle.incident.severity,
+              ts: Date.now(),
+            },
+          ].slice(-3))
+        }
         return prev.filter(p => p.id !== pid)
       }
-      
+
       // Move to next segment
       const nextLayer = seg + 1
       setLayerHits(prevHits => ({ ...prevHits, [nextLayer]: Date.now() }))
-      
+
       return prev.map(p =>
         p.id === pid && p.currentSegment === seg
           ? { ...p, currentSegment: seg + 1, animKey: p.animKey + 1 }
@@ -305,26 +379,53 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
     const s = Math.floor((Date.now() - ts * 1000) / 1000)
     return s < 60 ? `${s}s ago` : `${Math.floor(s / 60)}m ago`
   }
+  const latestArgusEvent = argusEvents.find(event => Date.now() - event.ts < 60_000)
+  const latestArgusAge = latestArgusEvent ? Math.max(0, Math.floor((Date.now() - latestArgusEvent.ts) / 1000)) : 0
 
   return (
-    <div style={{ padding: '24px 20px 16px', position: 'relative' }}>
+    <div style={{ padding: '16px 16px 12px', position: 'relative' }}>
       <style>{`
         ${LAYER_GLOW_CSS}
         @keyframes travelSeg {
-          0%   { left: -3%;  opacity: 0; transform: scale(0.7); }
-          10%  { opacity: 1; transform: scale(1); }
-          85%  { opacity: 1; transform: scale(1); }
-          100% { left: 103%; opacity: 0; transform: scale(0.7); }
+          0%   { left: -4%;  opacity: 0; transform: scale(0.6); }
+          8%   { opacity: 1; transform: scale(1); }
+          88%  { opacity: 1; transform: scale(1); }
+          100% { left: 104%; opacity: 0; transform: scale(0.6); }
         }
-        @keyframes blockedBounce {
-          0%   { left: -3%;  opacity: 0; transform: scale(0.7); }
-          10%  { opacity: 1; transform: scale(1); }
-          45%  { left: 50%; opacity: 1; transform: scale(1.2); }
-          55%  { left: 50%; opacity: 1; transform: scale(1.2) rotate(180deg); }
-          90%  { left: -3%; opacity: 1; transform: scale(0.7) rotate(180deg); }
-          100% { left: -3%; opacity: 0; transform: scale(0.7); }
+        @keyframes terminateSeg {
+          0%   { left: -4%; opacity: 0; transform: scale(0.72); filter: blur(1px); }
+          10%  { opacity: 1; transform: scale(1); filter: blur(0); }
+          68%  { opacity: 1; transform: scale(1); filter: blur(0); }
+          82%  { left: 86%; opacity: 1; transform: scale(1.08); filter: blur(0); }
+          100% { left: 96%; opacity: 0; transform: scale(0.22); filter: blur(5px); }
+        }
+        @keyframes signalChip {
+          0%   { left: -4%; opacity: 0; transform: translateY(-20px) scale(0.95); }
+          10%  { opacity: 1; transform: translateY(-20px) scale(1); }
+          68%  { opacity: 1; transform: translateY(-20px) scale(1); }
+          82%  { left: 86%; opacity: 1; transform: translateY(-20px) scale(1); }
+          100% { left: 96%; opacity: 0; transform: translateY(-20px) scale(0.86); }
         }
         @keyframes glowpulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+        @keyframes blockVanish {
+          0% { opacity: 0; transform: translate(-50%, 6px) scale(0.92); filter: blur(2px); }
+          18% { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); }
+          62% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+          100% { opacity: 0; transform: translate(-50%, -8px) scale(0.9); filter: blur(2px); }
+        }
+        @keyframes blockRing {
+          0% { opacity: 0.35; transform: translate(-50%, -50%) scale(0.45); }
+          100% { opacity: 0; transform: translate(-50%, -50%) scale(1.45); }
+        }
+        @keyframes intakeSwap {
+          0% { opacity: 0; transform: translateY(7px); border-color: rgba(0,212,255,0.45); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes intakeSweep {
+          0% { transform: translateX(-100%); opacity: 0; }
+          20% { opacity: 1; }
+          100% { transform: translateX(130%); opacity: 0; }
+        }
       `}</style>
 
       <div style={{ display: 'flex', alignItems: 'stretch', gap: '0' }}>
@@ -336,73 +437,118 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
           // Layer card
           const hasRecentHit = layerHits[i] && (Date.now() - layerHits[i] < 800)
           items.push(
-            <div key={`node-${i}`} style={{ flex: '1 1 0', minWidth: '220px', maxWidth: '260px' }}>
+            <div key={`node-${i}`} style={{ flex: '1 1 0', minWidth: '190px', maxWidth: '230px' }}>
               <div style={{
-                background: `linear-gradient(160deg, ${layer.color}12 0%, ${layer.color}05 100%)`,
-                border: `2px solid ${layer.color}40`,
-                borderRadius: '16px',
-                padding: '24px 18px',
+                background: `linear-gradient(160deg, ${layer.color}15 0%, ${layer.color}06 100%)`,
+                border: `2px solid ${layer.color}50`,
+                borderRadius: '12px',
+                padding: '18px 14px 16px',
                 position: 'relative',
                 height: '100%',
                 boxSizing: 'border-box',
                 animation: hasRecentHit ? `layerHit${i} 2s ease-out` : `layerGlow${i} 6s ease-in-out infinite`,
                 transition: 'all 0.3s ease-out',
               }}>
-                <div style={{ position: 'absolute', top: '14px', left: '16px', fontSize: '9px', color: `${layer.color}70`, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>{layer.label}</div>
+                <div style={{ position: 'absolute', top: '11px', left: '14px', fontSize: '8px', color: `${layer.color}80`, fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.8px' }}>{layer.label}</div>
 
-                <div style={{ textAlign: 'center', marginTop: '8px', marginBottom: '14px' }}>
-                  <div style={{ fontSize: '32px', marginBottom: '8px' }}>{layer.icon}</div>
-                  <div style={{ fontSize: '17px', fontWeight: 700, color: layer.color, fontFamily: 'JetBrains Mono, monospace' }}>{layer.name}</div>
-                  <div style={{ fontSize: '10px', color: '#8892a4', marginTop: '4px' }}>{layer.sub}</div>
+                <div style={{ textAlign: 'center', marginTop: '8px', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: layer.color, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0' }}>{layer.name}</div>
+                  <div style={{ fontSize: '10px', color: '#8892a4', marginTop: '4px', fontWeight: 500 }}>{layer.sub}</div>
                 </div>
 
-                <div style={{ fontSize: '9px', color: '#5a6478', lineHeight: 1.7, marginBottom: '14px', textAlign: 'center' }}>{layer.desc}</div>
+                <div style={{ minHeight: '46px', fontSize: '9px', color: '#7b8495', lineHeight: 1.55, marginBottom: '10px', textAlign: 'center', padding: '0 2px' }}>{layer.desc}</div>
+
+                {i === 1 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', marginBottom: '9px' }}>
+                    {['syscall', 'process', 'memory'].map(tag => (
+                      <span key={tag} style={{ fontSize: '7px', color: '#58a6ff', background: 'rgba(88,166,255,0.08)', border: '1px solid rgba(88,166,255,0.18)', borderRadius: '4px', padding: '2px 3px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace' }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+
+                {i === 3 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '4px', marginBottom: '9px' }}>
+                    {['DNS', 'L4', 'L7'].map(tag => (
+                      <span key={tag} style={{ fontSize: '7px', color: '#00ff9f', background: 'rgba(0,255,159,0.06)', border: '1px solid rgba(0,255,159,0.16)', borderRadius: '4px', padding: '2px 3px', textAlign: 'center', fontFamily: 'JetBrains Mono, monospace' }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Live metrics */}
-                <div style={{ background: 'rgba(0,0,0,0.35)', borderRadius: '8px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '9px', color: '#5a6478' }}>{layer.m1}</span>
-                    <span style={{ fontSize: '14px', color: '#e6edf3', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{stats.v1}</span>
+                <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: '8px', padding: '9px 11px', display: 'flex', flexDirection: 'column', gap: '5px', border: `1px solid ${layer.color}15` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', color: '#5a6478', fontWeight: 600 }}>{layer.m1}</span>
+                    <span style={{ fontSize: '16px', color: '#e6edf3', fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{stats.v1}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '9px', color: '#5a6478' }}>{layer.m2}</span>
-                    <span style={{ fontSize: '14px', color: layer.color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{stats.v2}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '9px', color: '#5a6478', fontWeight: 600 }}>{layer.m2}</span>
+                    <span style={{ fontSize: '16px', color: layer.color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{stats.v2}</span>
                   </div>
-                  <div style={{ height: '5px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden', marginTop: '4px' }}>
-                    <div style={{ height: '100%', width: `${layer.activity}%`, background: `linear-gradient(90deg, ${layer.color}55, ${layer.color})`, borderRadius: '3px' }} />
+                  <div style={{ height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden', marginTop: '4px' }}>
+                    <div style={{ height: '100%', width: `${layer.activity}%`, background: `linear-gradient(90deg, ${layer.color}60, ${layer.color})`, borderRadius: '3px', boxShadow: `0 0 6px ${layer.color}35` }} />
                   </div>
-                  <div style={{ fontSize: '9px', color: '#4a5568', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace' }}>{stats.rate.toFixed(1)}/s</div>
+                  <div style={{ fontSize: '9px', color: '#4a5568', textAlign: 'right', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>{stats.rate.toFixed(1)}/s</div>
                 </div>
+
+                {bursts.filter(b => b.layer === i).map(b => (
+                  <div key={b.id} style={{ position: 'absolute', left: '50%', top: '46%', pointerEvents: 'none', zIndex: 30 }}>
+                    <div style={{
+                      position: 'absolute', left: 0, top: 0, width: '86px', height: '86px',
+                      borderRadius: '50%', border: `1px solid ${b.color}70`,
+                      animation: 'blockRing 1.15s ease-out forwards',
+                    }} />
+                    <div style={{
+                      transform: 'translateX(-50%)',
+                      color: b.color,
+                      background: 'rgba(5,10,18,0.92)',
+                      border: `1px solid ${b.color}80`,
+                      borderRadius: '6px',
+                      boxShadow: `0 8px 24px rgba(0,0,0,0.4)`,
+                      fontSize: '10px',
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontWeight: 800,
+                      letterSpacing: '1.2px',
+                      padding: '6px 10px',
+                      whiteSpace: 'nowrap',
+                      animation: 'blockVanish 2.1s ease-out forwards',
+                    }}>
+                      {b.label}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )
 
-          // Connector with travelling particles (only between first 4 layers, not to Argus AI)
-          if (i < 3) {
+          // Connector with travelling particles
+          if (i < LAYERS.length - 1) {
             items.push(
-              <div key={`conn-${i}`} style={{ flex: '1 1 0', position: 'relative', minWidth: '80px', display: 'flex', alignItems: 'center' }}>
+              <div key={`conn-${i}`} style={{ flex: '0.65 1 0', position: 'relative', minWidth: '70px', display: 'flex', alignItems: 'center' }}>
                 <div style={{
                   position: 'absolute', left: 0, right: 0,
-                  height: '5px', top: '50%', transform: 'translateY(-50%)',
-                  background: `linear-gradient(90deg, ${layer.color}40, ${LAYERS[i + 1].color}40)`,
-                  borderRadius: '3px',
-                  boxShadow: `0 0 12px ${layer.color}25`,
+                  height: '6px', top: '50%', transform: 'translateY(-50%)',
+                  background: `linear-gradient(90deg, ${layer.color}50, ${LAYERS[i + 1].color}50)`,
+                  borderRadius: '4px',
+                  boxShadow: `0 0 16px ${layer.color}35, 0 0 32px ${layer.color}15`,
                 }} />
                 <div style={{
                   position: 'absolute', right: -1, top: '50%', transform: 'translateY(-50%)',
                   width: 0, height: 0,
-                  borderTop: '6px solid transparent', borderBottom: '6px solid transparent',
-                  borderLeft: `10px solid ${LAYERS[i + 1].color}80`,
+                  borderTop: '8px solid transparent', borderBottom: '8px solid transparent',
+                  borderLeft: `13px solid ${LAYERS[i + 1].color}90`,
+                  filter: `drop-shadow(0 0 6px ${LAYERS[i + 1].color}60)`,
                 }} />
 
                 {segParticles.map((p, pIdx) => {
                   const sv = SEV_PARTICLE[p.incident.severity] ?? SEV_PARTICLE.LOW
                   // Delay each particle so they travel one after another
                   const delay = pIdx * 1.5 // 1.5s delay between particles
-                  // Make particles bigger and more visible
-                  const particleSize = sv.size + 4
+                  const particleSize = sv.size + 5
                   const isBlocked = p.blocked
-                  
+                  const animName = isBlocked ? 'terminateSeg' : 'travelSeg'
+                  const animDuration = isBlocked ? 3.2 : 6.2 + i * 0.45
+                  const severityColor = SEV_COLOR[p.incident.severity] || p.color
+
                   return (
                     <div key={`${p.id}-${p.animKey}`}>
                       {/* Invisible hover zone (larger hit area) */}
@@ -411,66 +557,60 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
                           position: 'absolute', top: '50%', left: 0,
                           width: `${particleSize}px`, height: `${particleSize}px`,
                           marginTop: `-${particleSize / 2}px`,
-                          padding: '25px', // Larger hover area
+                          padding: '18px',
                           cursor: 'pointer', zIndex: 19,
-                          animation: isBlocked
-                            ? `blockedBounce 3s ease-in-out ${delay}s forwards`
-                            : `travelSeg ${7 + i * 0.6}s linear ${delay}s forwards`,
+                          animation: `${animName} ${animDuration}s ease-in-out ${delay}s forwards`,
                         }}
                         onMouseEnter={e => setHover({ particle: p, x: e.clientX, y: e.clientY })}
                         onMouseMove={e => setHover(prev => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)}
                         onMouseLeave={() => setHover(null)}
                         onClick={e => { e.stopPropagation(); navigate(`/threats?id=${p.incident.id}`) }}
                       />
-                      {/* Visible particle - BIGGER and MORE VISIBLE */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: '50%',
+                          left: 0,
+                          marginTop: '-38px',
+                          padding: '4px 7px',
+                          borderRadius: '5px',
+                          background: 'rgba(5,10,18,0.86)',
+                          border: `1px solid ${severityColor}55`,
+                          color: severityColor,
+                          fontSize: '8px',
+                          fontFamily: 'JetBrains Mono, monospace',
+                          fontWeight: 800,
+                          letterSpacing: '0.7px',
+                          whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                          zIndex: 21,
+                          boxShadow: '0 8px 18px rgba(0,0,0,0.35)',
+                          animation: `signalChip ${animDuration}s ease-in-out ${delay}s forwards`,
+                        }}
+                      >
+                        {signalLabel(p.incident)}
+                      </div>
+
+                      {/* Visible signal */}
                       <div
                         style={{
                           position: 'absolute', top: '50%', left: 0,
                           width: `${particleSize}px`, height: `${particleSize}px`,
                           marginTop: `-${particleSize / 2}px`,
                           borderRadius: sv.br, clipPath: sv.clip,
-                          background: isBlocked
-                            ? `radial-gradient(circle at 35% 35%, #ff2d55ff, #ff2d55dd)`  // Red for blocked
-                            : `radial-gradient(circle at 35% 35%, ${p.color}ff, ${p.color}dd)`,
-                          boxShadow: isBlocked
-                            ? `0 0 20px #ff2d55, 0 0 40px #ff2d55cc, 0 0 60px #ff2d5580`  // Stronger red glow
-                            : `0 0 16px ${p.color}, 0 0 32px ${p.color}90, 0 0 48px ${p.color}50`,
+                          background: `radial-gradient(circle at 30% 30%, ${severityColor}ff, ${severityColor}e6, ${severityColor}b8)`,
+                          boxShadow: `0 0 14px ${severityColor}80, inset 0 0 8px ${severityColor}40`,
                           pointerEvents: 'none', zIndex: 20,
-                          animation: isBlocked
-                            ? `blockedBounce 3s ease-in-out ${delay}s forwards`
-                            : `travelSeg ${7 + i * 0.6}s linear ${delay}s forwards`,
-                          border: isBlocked ? `2px solid #ff2d55` : `1px solid ${p.color}`,
+                          animation: `${animName} ${animDuration}s ease-in-out ${delay}s forwards`,
+                          border: `1px solid ${severityColor}`,
+                          filter: 'brightness(1.08) saturate(1.1)',
                         }}
                         onAnimationEnd={() => handleAnimEnd(p.id, i)}
                       />
-                      {/* "BLOCKED" label for blocked threats */}
-                      {isBlocked && (
-                        <div
-                          style={{
-                            position: 'absolute', top: '50%', left: 0,
-                            marginTop: `${particleSize / 2 + 8}px`,
-                            fontSize: '8px', fontWeight: 700,
-                            color: '#ff2d55', fontFamily: 'JetBrains Mono, monospace',
-                            textTransform: 'uppercase', letterSpacing: '1px',
-                            pointerEvents: 'none', zIndex: 20,
-                            animation: isBlocked
-                              ? `blockedBounce 3s ease-in-out ${delay}s forwards`
-                              : 'none',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          ⛔ BLOCKED
-                        </div>
-                      )}
                     </div>
                   )
                 })}
               </div>
-            )
-          } else if (i === 3) {
-            // Add spacer after Layer 4 (Cilium) before Argus AI
-            items.push(
-              <div key={`spacer-${i}`} style={{ flex: '1 1 0', minWidth: '60px' }} />
             )
           }
 
@@ -479,52 +619,137 @@ function DetectionLayerFlow({ incidents }: { incidents: Incident[] }) {
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '14px', justifyContent: 'center' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '22px', marginTop: '14px', justifyContent: 'center', padding: '0 8px' }}>
         {(['CRITICAL', 'HIGH', 'MED', 'LOW'] as const).map(sev => {
           const sv = SEV_PARTICLE[sev]; const c = SEV_COLOR[sev]
+          const legendSize = sv.size + 6
           return (
             <div key={sev} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: `${sv.size + 2}px`, height: `${sv.size + 2}px`, borderRadius: sv.br, clipPath: sv.clip, background: c, boxShadow: `0 0 8px ${c}90`, flexShrink: 0 }} />
-              <span style={{ fontSize: '9px', color: '#5a6478', fontFamily: 'JetBrains Mono, monospace', fontWeight: 600 }}>{sev}</span>
+              <div style={{
+                width: `${legendSize}px`,
+                height: `${legendSize}px`,
+                borderRadius: sv.br,
+                clipPath: sv.clip,
+                background: `radial-gradient(circle at 30% 30%, ${c}ff, ${c}dd)`,
+                boxShadow: `0 0 10px ${c}90, 0 0 20px ${c}50`,
+                flexShrink: 0,
+                border: `2px solid ${c}`,
+              }} />
+              <span style={{ fontSize: '9px', color: '#6b7280', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700, letterSpacing: '0.3px' }}>{sev}</span>
             </div>
           )
         })}
-        <span style={{ fontSize: '9px', color: '#3d4a5f', marginLeft: 'auto', fontWeight: 500 }}>
-          {particles.length > 0 ? `${particles.length} signal${particles.length > 1 ? 's' : ''} in flight · hover to inspect · click → threat feed` : 'threats injected at detection origin · travel through pipeline to AI analysis · layers glow on impact'}
+        <span style={{ fontSize: '9px', color: '#3d4a5f', marginLeft: 'auto', fontWeight: 600 }}>
+          {particles.length > 0 ? `${particles.length} live signal${particles.length > 1 ? 's' : ''} · hover to inspect · click → threat feed` : 'signals are detected at the enforcement layer; handled events vanish on block/containment'}
         </span>
+      </div>
+
+      <div style={{
+        marginTop: '12px',
+        display: 'grid',
+        gridTemplateColumns: '1fr 1.35fr',
+        alignItems: 'center',
+        gap: '14px',
+        background: 'rgba(0,212,255,0.035)',
+        border: `1px solid ${ARGUS_ANALYSIS.color}1f`,
+        borderRadius: '8px',
+        padding: '10px 12px',
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '4px' }}>
+            <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: ARGUS_ANALYSIS.color, boxShadow: `0 0 8px ${ARGUS_ANALYSIS.color}` }} />
+            <div style={{ fontSize: '9px', color: ARGUS_ANALYSIS.color, fontWeight: 800, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', letterSpacing: '1.4px' }}>{ARGUS_ANALYSIS.name} intake</div>
+          </div>
+          <div style={{ fontSize: '10px', color: '#6b7280', lineHeight: 1.45 }}>Telemetry is copied here after enforcement for enrichment, explanation, and response routing.</div>
+        </div>
+        <div style={{ minHeight: '58px', display: 'flex', alignItems: 'center' }}>
+          {latestArgusEvent ? (
+            <div key={latestArgusEvent.id} style={{
+              position: 'relative',
+              overflow: 'hidden',
+              width: '100%',
+              display: 'grid',
+              gridTemplateColumns: '84px 96px 1fr 52px',
+              gap: '8px',
+              alignItems: 'center',
+              background: 'linear-gradient(135deg, rgba(0,0,0,0.28), rgba(0,212,255,0.035))',
+              border: `1px solid ${latestArgusEvent.color}30`,
+              borderRadius: '8px',
+              padding: '8px 10px',
+              animation: 'intakeSwap 0.28s ease-out',
+            }}>
+              <span style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: '38%',
+                background: `linear-gradient(90deg, transparent, ${ARGUS_ANALYSIS.color}18, transparent)`,
+                animation: 'intakeSweep 1.2s ease-out',
+              }} />
+              <span style={{ fontSize: '8px', color: latestArgusEvent.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, position: 'relative' }}>{latestArgusEvent.layer}</span>
+              <span style={{ fontSize: '8px', color: ARGUS_ANALYSIS.color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, position: 'relative' }}>→ Argus AI</span>
+              <span style={{ fontSize: '9px', color: '#9aa7b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', position: 'relative' }}>{latestArgusEvent.action} · {latestArgusEvent.rule}</span>
+              <span style={{ fontSize: '8px', color: '#58a6ff', fontFamily: 'JetBrains Mono, monospace', fontWeight: 800, textAlign: 'right', position: 'relative' }}>{latestArgusAge}s</span>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', color: ARGUS_ANALYSIS.color, fontFamily: 'JetBrains Mono, monospace', fontSize: '9px', fontWeight: 700 }}>
+              waiting for last-1m telemetry
+              <span style={{ width: '42px', height: '1px', background: `linear-gradient(90deg, transparent, ${ARGUS_ANALYSIS.color})`, boxShadow: `0 0 10px ${ARGUS_ANALYSIS.color}` }} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Hover tooltip */}
       {hover && (
         <div style={{
           position: 'fixed',
-          left: Math.min(hover.x + 18, window.innerWidth - 260),
-          top: Math.max(hover.y - 115, 10),
-          background: 'linear-gradient(135deg, #0d1421, #0a1018)',
+          left: Math.min(hover.x + 18, window.innerWidth - 310),
+          top: Math.max(hover.y - 148, 10),
+          background: 'linear-gradient(135deg, rgba(13,20,33,0.98), rgba(7,12,20,0.98))',
           border: `1px solid ${hover.particle.color}70`,
-          borderRadius: '12px', padding: '14px 16px',
-          zIndex: 9999, width: '240px',
-          boxShadow: `0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px ${hover.particle.color}18`,
+          borderRadius: '8px', padding: '13px 14px',
+          zIndex: 9999, width: '292px',
+          boxShadow: `0 16px 44px rgba(0,0,0,0.72), 0 0 0 1px ${hover.particle.color}18`,
           pointerEvents: 'none',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '9px' }}>
-            {(() => {
+          {(() => {
+            const path = getThreatPath(hover.particle.incident)
+            const startLayer = LAYERS[path.start]
+            const targetLayer = LAYERS[path.end]
+            return <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '9px' }}>
+                {(() => {
               const sv = SEV_PARTICLE[hover.particle.incident.severity] ?? SEV_PARTICLE.LOW
               const c = SEV_COLOR[hover.particle.incident.severity]
               return <div style={{ width: `${sv.size + 1}px`, height: `${sv.size + 1}px`, borderRadius: sv.br, clipPath: sv.clip, background: c, boxShadow: `0 0 6px ${c}`, flexShrink: 0 }} />
-            })()}
-            <span style={{ fontSize: '10px', fontWeight: 700, color: SEV_COLOR[hover.particle.incident.severity], fontFamily: 'JetBrains Mono, monospace', letterSpacing: '1px' }}>{hover.particle.incident.severity}</span>
-            <span style={{ fontSize: '8px', color: '#5a6478', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{fmtAge(hover.particle.incident.ts)}</span>
-          </div>
-          <div style={{ fontSize: '12px', color: '#e6edf3', lineHeight: 1.45, marginBottom: '8px' }}>{hover.particle.incident.rule}</div>
-          <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '8px' }}>
-            {hover.particle.incident.namespace && <span style={{ fontSize: '9px', color: '#58a6ff', background: 'rgba(88,166,255,0.1)', border: '1px solid rgba(88,166,255,0.22)', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>{hover.particle.incident.namespace}</span>}
-            {hover.particle.incident.hostname && <span style={{ fontSize: '9px', color: '#8892a4', background: 'rgba(136,146,164,0.1)', border: '1px solid rgba(136,146,164,0.2)', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>{hover.particle.incident.hostname}</span>}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ fontSize: '9px', fontWeight: 700, color: hover.particle.color, fontFamily: 'JetBrains Mono, monospace' }}>{hover.particle.incident.action_taken}</span>
-            <span style={{ fontSize: '8px', color: '#4a5568' }}>click → threat feed</span>
-          </div>
+                })()}
+                <span style={{ fontSize: '10px', fontWeight: 700, color: SEV_COLOR[hover.particle.incident.severity], fontFamily: 'JetBrains Mono, monospace', letterSpacing: '1px' }}>{hover.particle.incident.severity}</span>
+                <span style={{ fontSize: '8px', color: '#5a6478', marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{fmtAge(hover.particle.incident.ts)}</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#f0f6fc', lineHeight: 1.45, marginBottom: '10px', fontWeight: 700 }}>{hover.particle.incident.rule}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+                <div style={{ background: `${startLayer.color}12`, border: `1px solid ${startLayer.color}30`, borderRadius: '6px', padding: '6px 7px' }}>
+                  <div style={{ fontSize: '7px', color: '#5a6478', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '3px' }}>Detected by</div>
+                  <div style={{ fontSize: '10px', color: startLayer.color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{startLayer.name}</div>
+                </div>
+                <div style={{ background: `${targetLayer.color}12`, border: `1px solid ${targetLayer.color}30`, borderRadius: '6px', padding: '6px 7px' }}>
+                  <div style={{ fontSize: '7px', color: '#5a6478', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '3px' }}>{path.blocked ? 'Outcome' : 'After detection'}</div>
+                  <div style={{ fontSize: '10px', color: targetLayer.color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{path.blocked ? actionLabel(hover.particle.incident) : 'Evidence to Argus'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginBottom: '9px' }}>
+                {hover.particle.incident.namespace && <span style={{ fontSize: '9px', color: '#58a6ff', background: 'rgba(88,166,255,0.1)', border: '1px solid rgba(88,166,255,0.22)', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>{hover.particle.incident.namespace}</span>}
+                {hover.particle.incident.hostname && <span style={{ fontSize: '9px', color: '#8892a4', background: 'rgba(136,146,164,0.1)', border: '1px solid rgba(136,146,164,0.2)', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>{hover.particle.incident.hostname}</span>}
+                <span style={{ fontSize: '9px', color: '#bc8cff', background: 'rgba(188,140,255,0.08)', border: '1px solid rgba(188,140,255,0.2)', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>{Math.round(hover.particle.incident.confidence * 100)}% confidence</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '9px', fontWeight: 700, color: hover.particle.color, fontFamily: 'JetBrains Mono, monospace' }}>{hover.particle.incident.action_taken}</span>
+                <span style={{ fontSize: '8px', color: '#6b7280' }}>click to open incident detail</span>
+              </div>
+            </>
+          })()}
         </div>
       )}
     </div>
@@ -557,33 +782,99 @@ function LiveEventTicker({ incidents }: { incidents: Incident[] }) {
     return diff < 60 ? `${diff}s` : `${Math.floor(diff / 60)}m`
   }
 
+  // Detect which layer caught the threat — prefer kyverno_blocked field, fall back to rule name
+  const getDetectionLayer = (inc: Incident) => {
+    const r = inc.rule.toLowerCase()
+    if (inc.kyverno_blocked || r.includes('kyverno') || r.includes('admission') || r.includes('rejected') || r.includes('disallowed') || r.includes('blocked')) {
+      return { name: 'Kyverno', icon: '', color: '#bc8cff', action: 'BLOCKED', isKyverno: true }
+    } else if (r.includes('cilium') || r.includes('network') || r.includes('dns') || r.includes('egress') || r.includes('c2') || r.includes('lateral') || r.includes('ssrf') || r.includes('port scan') || r.includes('tor')) {
+      return { name: 'Cilium', icon: '', color: '#00ff9f', action: 'DETECTED', isKyverno: false }
+    } else if (r.includes('ebpf') || r.includes('kernel') || r.includes('syscall') || r.includes('memory')) {
+      return { name: 'eBPF', icon: '', color: '#58a6ff', action: 'DETECTED', isKyverno: false }
+    } else {
+      return { name: 'Falco', icon: '', color: '#ff9f0a', action: 'DETECTED', isKyverno: false }
+    }
+  }
+
   return (
-    <div ref={ref} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+    <div ref={ref} style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '3px' }}>
       {incidents.slice(0, 20).map((inc, i) => {
         const isNotify = inc.action_taken === 'NOTIFY'
         const channel = isNotify ? getNotifyChannel(inc.id) : null
+        const layer = getDetectionLayer(inc)
+        const isKyverno = layer.isKyverno
+        const isBlocked = layer.action === 'BLOCKED' || inc.action_taken === 'KILL' || inc.action_taken === 'ISOLATE'
+        const rowBorderColor = isKyverno
+          ? 'rgba(188,140,255,0.25)'
+          : isBlocked ? 'rgba(255,45,85,0.2)' : 'rgba(255,255,255,0.05)'
+        const rowBg = isKyverno
+          ? 'rgba(188,140,255,0.04)'
+          : i === 0 ? 'rgba(0,255,159,0.05)' : 'rgba(0,0,0,0.2)'
 
         return (
           <div
             key={inc.id}
             onClick={() => navigate(`/threats?id=${inc.id}`)}
             style={{
-              display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 8px',
-              background: i === 0 ? 'rgba(0,255,159,0.04)' : 'transparent',
-              borderRadius: '5px',
-              borderLeft: `2px solid ${SEV_COLOR[inc.severity] || '#4a5568'}`,
+              display: 'flex', alignItems: 'center', gap: '7px', padding: '7px 10px',
+              background: rowBg, borderRadius: '6px',
               animation: i === 0 ? 'fadeInUp 0.3s ease-out' : 'none',
-              cursor: 'pointer', transition: 'background 0.15s',
+              cursor: 'pointer', transition: 'all 0.15s',
+              border: `1px solid ${rowBorderColor}`,
+              borderLeft: `3px solid ${isKyverno ? '#bc8cff' : SEV_COLOR[inc.severity] || '#4a5568'}`,
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.03)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = i === 0 ? 'rgba(0,255,159,0.04)' : 'transparent' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.05)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = rowBg }}
           >
-            <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', width: '22px', flexShrink: 0 }}>{fmt(inc.ts)}</span>
-            <span style={{ fontSize: '9px', fontWeight: 700, color: SEV_COLOR[inc.severity], fontFamily: 'JetBrains Mono, monospace', width: '14px', flexShrink: 0 }}>
+            {/* Time */}
+            <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', width: '24px', flexShrink: 0 }}>{fmt(inc.ts)}</span>
+
+            {/* Severity indicator */}
+            <span style={{ fontSize: '10px', fontWeight: 700, color: SEV_COLOR[inc.severity], fontFamily: 'JetBrains Mono, monospace', width: '16px', flexShrink: 0, textAlign: 'center' }}>
               {inc.severity === 'CRITICAL' ? '◆' : inc.severity === 'HIGH' ? '●' : inc.severity === 'MED' || inc.severity === 'MEDIUM' ? '▪' : '·'}
             </span>
-            <span style={{ fontSize: '10px', color: '#d1d5db', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inc.rule}</span>
-            {inc.namespace && <span style={{ fontSize: '7px', color: '#58a6ff', background: 'rgba(88,166,255,0.1)', border: '1px solid rgba(88,166,255,0.2)', padding: '1px 4px', borderRadius: '3px', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.namespace}</span>}
+
+            {/* Detection Layer Badge */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              padding: '2px 6px', borderRadius: '4px',
+              background: `${layer.color}18`, border: `1px solid ${layer.color}45`,
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: '10px' }}>{layer.icon}</span>
+              <span style={{ fontSize: '7px', fontWeight: 700, color: layer.color, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.3px' }}>
+                {layer.name}
+              </span>
+            </div>
+
+            {/* Kyverno blocked / action indicator */}
+            {isKyverno ? (
+              <span style={{
+                fontSize: '7px', fontWeight: 800, color: '#bc8cff',
+                background: 'rgba(188,140,255,0.12)', border: '1px solid rgba(188,140,255,0.35)',
+                padding: '2px 5px', borderRadius: '3px',
+                fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.5px', flexShrink: 0,
+              }}>
+                ⛔ BLOCKED
+              </span>
+            ) : isBlocked && (
+              <span style={{
+                fontSize: '7px', fontWeight: 800, color: '#ff2d55',
+                background: 'rgba(255,45,85,0.15)', border: '1px solid rgba(255,45,85,0.3)',
+                padding: '2px 5px', borderRadius: '3px',
+                fontFamily: 'JetBrains Mono, monospace', letterSpacing: '0.5px', flexShrink: 0,
+              }}>
+                ⛔ {layer.action}
+              </span>
+            )}
+
+            {/* Rule name */}
+            <span style={{ fontSize: '10px', color: '#e6edf3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{inc.rule}</span>
+
+            {/* Namespace */}
+            {inc.namespace && <span style={{ fontSize: '7px', color: '#58a6ff', background: 'rgba(88,166,255,0.12)', border: '1px solid rgba(88,166,255,0.25)', padding: '2px 5px', borderRadius: '3px', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{inc.namespace}</span>}
+
+            {/* Action badge */}
             {isNotify && channel
               ? <NotifyBadge channel={channel} />
               : <ActionBadge action={inc.action_taken} />
@@ -598,42 +889,80 @@ function LiveEventTicker({ incidents }: { incidents: Incident[] }) {
 
 // ─── Security Layer Row ───────────────────────────────────────────────────────
 
-function SecurityLayerRow({ name, status, detail, icon }: { name: string; status: 'active' | 'degraded' | 'inactive'; detail: string; icon: string }) {
+function SecurityLayerRow({
+  name,
+  status,
+  detail,
+  eventCount,
+  activity,
+  updatedAgo,
+}: {
+  name: string
+  status: 'active' | 'degraded' | 'inactive'
+  detail: string
+  eventCount: number
+  activity: number
+  updatedAgo: string
+}) {
   const colors = { active: '#00ff9f', degraded: '#ff9f0a', inactive: '#4a5568' }
   const color = colors[status]
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: `1px solid ${color}18` }}>
-      <span style={{ fontSize: '13px', flexShrink: 0 }}>{icon}</span>
-      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: color, boxShadow: status === 'active' ? `0 0 5px ${color}` : 'none', flexShrink: 0, animation: status === 'active' ? 'glowpulse 3s infinite' : 'none' }} />
-      <span style={{ fontSize: '10px', color: '#e6edf3', flex: 1 }}>{name}</span>
-      <span style={{ fontSize: '8px', color: '#4a5568' }}>{detail}</span>
-      <span style={{ fontSize: '7px', color, background: `${color}18`, border: `1px solid ${color}33`, padding: '1px 5px', borderRadius: '3px', fontFamily: 'JetBrains Mono, monospace' }}>{status}</span>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '7px', padding: '7px 9px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: `1px solid ${color}18` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, boxShadow: status === 'active' ? `0 0 7px ${color}` : 'none', flexShrink: 0, animation: status === 'active' ? 'glowpulse 2.2s infinite' : 'none' }} />
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '10px', color: '#e6edf3', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+            <span style={{ fontSize: '7px', color, background: `${color}18`, border: `1px solid ${color}33`, padding: '1px 5px', borderRadius: '3px', fontFamily: 'JetBrains Mono, monospace' }}>{status}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginTop: '4px' }}>
+            <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{ width: `${activity}%`, height: '100%', background: color, borderRadius: '2px', transition: 'width 700ms ease-out', boxShadow: `0 0 8px ${color}70` }} />
+            </div>
+            <span style={{ fontSize: '7px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap' }}>{updatedAgo}</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ minWidth: '82px', textAlign: 'right' }}>
+        <div style={{ fontSize: '9px', color, fontFamily: 'JetBrains Mono, monospace', fontWeight: 800 }}>{eventCount}</div>
+        <div style={{ fontSize: '7px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{detail}</div>
+      </div>
     </div>
   )
 }
 
 // ─── Node Health Bar ──────────────────────────────────────────────────────────
 
-function NodeHealthBar({ name, ip, status, podCount, cpuPct, memPct }: { name: string; ip: string; status: string; podCount: number; cpuPct: number; memPct: number }) {
+function NodeHealthBar({ node, status, recentIncidents }: { node: NodeTelemetry; status: string; recentIncidents: number }) {
   const color = status === 'threat' ? '#ff2d55' : status === 'warning' ? '#ff9f0a' : '#00ff9f'
+  const fmtAge = Math.max(0, Math.floor((Date.now() - node.lastSeen) / 1000))
   return (
-    <div style={{ background: '#111827', border: `1px solid ${color}22`, borderRadius: '8px', padding: '10px 12px' }}>
+    <div style={{ background: '#111827', border: `1px solid ${color}22`, borderRadius: '8px', padding: '10px 12px', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '1px', background: `linear-gradient(90deg, transparent, ${color}90, transparent)`, animation: 'scanline 2.6s linear infinite' }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}>
         <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, boxShadow: `0 0 5px ${color}`, animation: status === 'threat' ? 'glowpulse 1.5s infinite' : 'none' }} />
-        <span style={{ fontSize: '10px', fontWeight: 700, color: '#e6edf3', fontFamily: 'JetBrains Mono, monospace' }}>{name}</span>
-        <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>{ip}</span>
-        <span style={{ fontSize: '8px', color, marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{podCount} pods</span>
+        <span style={{ fontSize: '10px', fontWeight: 700, color: '#e6edf3', fontFamily: 'JetBrains Mono, monospace' }}>{node.name}</span>
+        <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>{node.ip}</span>
+        <span style={{ fontSize: '8px', color, marginLeft: 'auto', fontFamily: 'JetBrains Mono, monospace' }}>{node.pods} pods</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        {[{ label: 'CPU', pct: cpuPct, color: cpuPct > 80 ? '#ff2d55' : cpuPct > 60 ? '#ff9f0a' : '#00ff9f' }, { label: 'MEM', pct: memPct, color: memPct > 80 ? '#ff2d55' : memPct > 60 ? '#ff9f0a' : '#58a6ff' }].map(({ label, pct, color: bc }) => (
+        {[
+          { label: 'CPU', pct: node.cpu, color: node.cpu > 80 ? '#ff2d55' : node.cpu > 60 ? '#ff9f0a' : '#00ff9f' },
+          { label: 'MEM', pct: node.mem, color: node.mem > 80 ? '#ff2d55' : node.mem > 60 ? '#ff9f0a' : '#58a6ff' },
+          { label: 'NET', pct: Math.min(96, Math.round((node.rx + node.tx) / 2)), color: '#00d4ff' },
+        ].map(({ label, pct, color: bc }) => (
           <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ fontSize: '8px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace', width: '28px' }}>{label}</span>
             <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${pct}%`, background: bc, borderRadius: '2px', transition: 'width 1s ease-out' }} />
+              <div style={{ height: '100%', width: `${pct}%`, background: bc, borderRadius: '2px', transition: 'width 900ms ease-out', boxShadow: `0 0 7px ${bc}55` }} />
             </div>
             <span style={{ fontSize: '8px', color: bc, fontFamily: 'JetBrains Mono, monospace', width: '28px', textAlign: 'right' }}>{pct}%</span>
           </div>
         ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <span style={{ fontSize: '7px', color: '#4a5568', fontFamily: 'JetBrains Mono, monospace' }}>live {fmtAge}s</span>
+        <span style={{ fontSize: '7px', color: recentIncidents > 0 ? color : '#4a5568', fontFamily: 'JetBrains Mono, monospace', marginLeft: 'auto' }}>{recentIncidents} recent events</span>
       </div>
     </div>
   )
@@ -643,44 +972,107 @@ function NodeHealthBar({ name, ip, status, podCount, cpuPct, memPct }: { name: s
 
 export default function CommandCenter() {
   const [stats, setStats] = useState<Stats | null>(null)
-  const [incidents, setIncidents] = useState<Incident[]>(MOCK_INCIDENTS)
-  const [liveConnected, setLiveConnected] = useState(false)
-  const mockPoolIndex = useRef(0)
-  const mockTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [incidents, setIncidents] = useState<Incident[]>([])  // Start empty, load from backend
+  const [backendLive, setBackendLive] = useState(false)
+  const [lastRefresh, setLastRefresh] = useState('')
+  const [simulating, setSimulating] = useState(false)
   const [sparkData] = useState(() => ({
-    critical: Array.from({ length: 12 }, () => Math.floor(Math.random() * 5)),
-    events: Array.from({ length: 12 }, () => Math.floor(Math.random() * 30) + 10),
+    critical: Array.from({ length: 12 }, () => 0),
+    events: Array.from({ length: 12 }, () => 0),
   }))
+  const [nodeTelemetry, setNodeTelemetry] = useState<NodeTelemetry[]>([])
+
+  const simulateThreats = async (scenario = 'mixed', count = 20) => {
+    setSimulating(true)
+    try {
+      const response = await fetch(`${API}/simulate-threats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count, scenario })
+      })
+      if (response.ok) {
+        // Refresh incidents immediately
+        const iRes = await fetch(`${API}/incidents?limit=50`)
+        if (iRes.ok) {
+          const data = await iRes.json()
+          if (data.incidents) setIncidents(data.incidents)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to simulate threats:', error)
+    } finally {
+      setSimulating(false)
+    }
+  }
 
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        const [sRes, iRes] = await Promise.all([
+        const [sRes, iRes, nRes] = await Promise.all([
           fetch(`${API}/incidents/stats`),
           fetch(`${API}/incidents?limit=50`),
+          fetch(`${API}/node-telemetry`),
         ])
         if (sRes.ok) setStats(await sRes.json())
         if (iRes.ok) {
           const data = await iRes.json()
-          if (data.incidents?.length) { setIncidents(data.incidents); setLiveConnected(true) }
+          // Always use backend data if available, even if empty
+          if (data.incidents !== undefined) {
+            setIncidents(data.incidents)
+            setBackendLive(true)
+            setLastRefresh(new Date().toTimeString().slice(0, 8))
+          }
         }
-      } catch {}
+        if (nRes.ok) {
+          const nodeData = await nRes.json()
+          setNodeTelemetry(nodeData.nodes || [])
+        }
+      } catch (error) {
+        console.error('Failed to fetch incidents:', error)
+        setBackendLive(false)
+      }
     }
     fetchAll()
     const t = setInterval(fetchAll, 5000)
     return () => clearInterval(t)
   }, [])
 
-  // Demo mode: cycle through all 10 threats, one every 30s, then loop
+  // Seed backend incidents on first load if the backend is empty.
   useEffect(() => {
-    if (liveConnected) return
-    mockTimer.current = setInterval(() => {
-      const tpl = MOCK_POOL[mockPoolIndex.current % MOCK_POOL.length]
-      mockPoolIndex.current++
-      setIncidents(prev => [{ ...tpl, id: `live-${Date.now()}`, ts: Date.now() / 1000 }, ...prev].slice(0, 50))
-    }, 30000)
-    return () => { if (mockTimer.current) clearInterval(mockTimer.current) }
-  }, [liveConnected])
+    const autoSimulate = async () => {
+      // Wait a bit for initial data fetch
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // If we have less than 10 incidents or they're all the same type, simulate diverse threats
+      if (incidents.length < 10) {
+        const uniqueRules = new Set(incidents.map(i => i.rule))
+        if (uniqueRules.size < 3) {
+          console.log('Seeding backend threat stream for live dashboard data')
+          await simulateThreats('mixed', 20)
+        }
+      }
+    }
+
+    autoSimulate()
+  }, []) // Run once on mount
+
+  // Periodically add new diverse threats (every 45 seconds)
+  useEffect(() => {
+    const periodicSimulate = setInterval(async () => {
+      // Add 3-5 new threats periodically to keep things interesting
+      try {
+        await fetch(`${API}/simulate-threats`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ count: 3, scenario: 'mixed' })
+        })
+      } catch (error) {
+        console.error('Periodic simulation failed:', error)
+      }
+    }, 45000) // Every 45 seconds
+
+    return () => clearInterval(periodicSimulate)
+  }, [])
 
   const kpis = stats
     ? [
@@ -700,16 +1092,192 @@ export default function CommandCenter() {
         { label: 'Total all time',   value: incidents.length,                                                                  color: '#bc8cff', spark: null },
       ]
 
+  const recentWindow = Date.now() - 60 * 1000
+  const recentIncidents = incidents.filter(i => i.ts * 1000 > recentWindow)
+  const layerCount = (match: (inc: Incident) => boolean) => recentIncidents.filter(match).length
+  const lastLayerEvent = (match: (inc: Incident) => boolean) => {
+    const last = incidents.find(match)
+    if (!last) return 'idle'
+    const seconds = Math.max(0, Math.floor((Date.now() - last.ts * 1000) / 1000))
+    return seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ago`
+  }
+  const securityLayers = [
+    {
+      name: 'Falco runtime detection',
+      status: 'active' as const,
+      detail: 'runtime events',
+      eventCount: layerCount(i => getThreatPath(i).end === 2),
+      activity: Math.min(100, 18 + layerCount(i => getThreatPath(i).end === 2) * 11),
+      updatedAgo: lastLayerEvent(i => getThreatPath(i).end === 2),
+    },
+    {
+      name: 'Kyverno admission control',
+      status: 'active' as const,
+      detail: 'policy rejects',
+      eventCount: layerCount(i => i.kyverno_blocked || getThreatPath(i).end === 0),
+      activity: Math.min(100, 16 + layerCount(i => i.kyverno_blocked || getThreatPath(i).end === 0) * 14),
+      updatedAgo: lastLayerEvent(i => i.kyverno_blocked || getThreatPath(i).end === 0),
+    },
+    {
+      name: 'Cilium eBPF networking',
+      status: 'active' as const,
+      detail: 'flow decisions',
+      eventCount: layerCount(i => getThreatPath(i).end === 3),
+      activity: Math.min(100, 24 + layerCount(i => getThreatPath(i).end === 3) * 10),
+      updatedAgo: lastLayerEvent(i => getThreatPath(i).end === 3),
+    },
+    {
+      name: 'eBPF kernel telemetry',
+      status: 'active' as const,
+      detail: 'kernel signals',
+      eventCount: layerCount(i => getThreatPath(i).end === 1),
+      activity: Math.min(100, 20 + layerCount(i => getThreatPath(i).end === 1) * 12),
+      updatedAgo: lastLayerEvent(i => getThreatPath(i).end === 1),
+    },
+    {
+      name: 'Argus AI agent',
+      status: 'active' as const,
+      detail: 'decisions routed',
+      eventCount: recentIncidents.length,
+      activity: Math.min(100, 28 + recentIncidents.length * 5),
+      updatedAgo: incidents[0] ? lastLayerEvent(() => true) : 'idle',
+    },
+    {
+      name: 'Loki log aggregation',
+      status: 'degraded' as const,
+      detail: 'direct push failing',
+      eventCount: incidents.filter(i => i.enrichment_sources?.includes?.('loki')).length,
+      activity: 34,
+      updatedAgo: 'retrying',
+    },
+  ]
+
   return (
     <div style={{ padding: '14px', fontFamily: 'Inter, sans-serif', height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
       <style>{`
         @keyframes glowpulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
         @keyframes fadeInUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,159,0.4); }
+          50% { box-shadow: 0 0 0 6px rgba(0,255,159,0); }
+        }
+        @keyframes scanline {
+          0% { transform: translateX(-100%); opacity: 0; }
+          20% { opacity: 1; }
+          100% { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes liveBlink {
+          0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(0,255,159,0.75); }
+          50% { opacity: 0.45; box-shadow: 0 0 14px rgba(0,255,159,0.25); }
+        }
       `}</style>
 
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace' }}>⌂ Command Center</div>
-        {!liveConnected && <span style={{ fontSize: '7px', color: '#4a5568', background: 'rgba(255,255,255,0.04)', padding: '2px 7px', borderRadius: '4px', fontFamily: 'JetBrains Mono, monospace' }}>demo mode</span>}
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '7px',
+          color: backendLive ? '#00ff9f' : '#ff9f0a',
+          background: backendLive ? 'rgba(0,255,159,0.06)' : 'rgba(255,159,10,0.08)',
+          border: `1px solid ${backendLive ? 'rgba(0,255,159,0.2)' : 'rgba(255,159,10,0.25)'}`,
+          padding: '3px 8px',
+          borderRadius: '4px',
+          fontFamily: 'JetBrains Mono, monospace',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}>
+          <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: backendLive ? '#00ff9f' : '#ff9f0a', animation: backendLive ? 'liveBlink 1.4s infinite' : 'none' }} />
+          {backendLive ? `backend live${lastRefresh ? ` · ${lastRefresh}` : ''}` : 'backend disconnected'}
+        </span>
+        <button
+        onClick={() => simulateThreats('human_approval', 3)}
+        disabled={simulating}
+        style={{
+          marginLeft: 'auto',
+          padding: '6px 12px',
+          background: simulating ? 'rgba(188,140,255,0.12)' : 'linear-gradient(135deg, rgba(188,140,255,0.12), rgba(188,140,255,0.22))',
+          border: '1px solid rgba(188,140,255,0.35)',
+          borderRadius: '6px',
+          color: '#bc8cff',
+          fontSize: '9px',
+          fontWeight: 700,
+          fontFamily: 'JetBrains Mono, monospace',
+          cursor: simulating ? 'not-allowed' : 'pointer',
+          letterSpacing: '0.5px',
+          transition: 'all 0.2s',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        Human Approval
+      </button>
+      <button
+        onClick={() => simulateThreats('attack_chain', 5)}
+        disabled={simulating}
+        style={{
+          padding: '6px 12px',
+          background: simulating ? 'rgba(255,45,85,0.12)' : 'linear-gradient(135deg, rgba(255,45,85,0.1), rgba(255,45,85,0.2))',
+          border: '1px solid rgba(255,45,85,0.35)',
+          borderRadius: '6px',
+          color: '#ff2d55',
+          fontSize: '9px',
+          fontWeight: 700,
+          fontFamily: 'JetBrains Mono, monospace',
+          cursor: simulating ? 'not-allowed' : 'pointer',
+          letterSpacing: '0.5px',
+          transition: 'all 0.2s',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        Attack Chain
+      </button>
+      <button
+          onClick={() => simulateThreats('mixed', 20)}
+          disabled={simulating}
+          style={{
+            padding: '6px 12px',
+            background: simulating ? 'rgba(255,159,10,0.2)' : 'linear-gradient(135deg, rgba(255,159,10,0.15), rgba(255,159,10,0.25))',
+            border: '1px solid rgba(255,159,10,0.4)',
+            borderRadius: '6px',
+            color: '#ff9f0a',
+            fontSize: '9px',
+            fontWeight: 700,
+            fontFamily: 'JetBrains Mono, monospace',
+            cursor: simulating ? 'not-allowed' : 'pointer',
+            letterSpacing: '0.5px',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+          onMouseEnter={e => !simulating && (e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,159,10,0.25), rgba(255,159,10,0.35)')}
+          onMouseLeave={e => !simulating && (e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,159,10,0.15), rgba(255,159,10,0.25)')}
+        >
+          {simulating ? (
+            <>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ff9f0a" strokeWidth="3">
+                <circle cx="12" cy="12" r="10" opacity="0.25"/>
+                <path d="M12 2 A10 10 0 0 1 22 12" strokeLinecap="round">
+                  <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+                </path>
+              </svg>
+              Simulating...
+            </>
+          ) : (
+            <>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#ff9f0a" strokeWidth="2.5">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Simulate Diverse Threats
+            </>
+          )}
+        </button>
       </div>
 
       {/* KPI row */}
@@ -725,12 +1293,12 @@ export default function CommandCenter() {
         ))}
       </div>
 
-      {/* Detection Pipeline — full width */}
+      {/* Detection Pipeline — FULL WIDTH, LARGER BUT FITS */}
       <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '12px' }}>
-        <div style={{ padding: '12px 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace' }}>Detection Pipeline</span>
-          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00ff9f', animation: 'glowpulse 1.5s infinite', boxShadow: '0 0 5px #00ff9f' }} />
-          <span style={{ marginLeft: 'auto', fontSize: '7px', color: '#3d4a5f' }}>signals injected at origin layer · travel to AI analysis · click → threat feed</span>
+        <div style={{ padding: '14px 18px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '10px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace', fontWeight: 700 }}>⚡ Detection Pipeline</span>
+          <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#00ff9f', animation: 'glowpulse 1.5s infinite', boxShadow: '0 0 6px #00ff9f' }} />
+          <span style={{ marginLeft: 'auto', fontSize: '8px', color: '#3d4a5f', fontWeight: 500 }}>showing max 2 live signals · handled events collapse at enforcement · telemetry copies to Argus</span>
         </div>
         <DetectionLayerFlow incidents={incidents} />
       </div>
@@ -738,10 +1306,22 @@ export default function CommandCenter() {
       {/* Bottom row: Node Health | Live Events | Security Layers */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
         <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace', marginBottom: '2px' }}>Node Health</div>
-          <NodeHealthBar name="k3s-master"  ip="192.168.139.42" status="healthy" podCount={6} cpuPct={18} memPct={34} />
-          <NodeHealthBar name="k3s-worker1" ip="192.168.139.77" status={incidents.some(i => i.hostname === 'k3s-worker1' && i.severity === 'CRITICAL') ? 'threat' : 'healthy'} podCount={8} cpuPct={42} memPct={61} />
-          <NodeHealthBar name="k3s-worker2" ip="192.168.139.45" status="healthy" podCount={7} cpuPct={31} memPct={48} />
+          <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '7px' }}>
+            Node Health
+            <span style={{ fontSize: '7px', color: '#4a5568', letterSpacing: '0', marginLeft: 'auto' }}>live /api/node-telemetry</span>
+          </div>
+          {nodeTelemetry.map(node => {
+            const nodeEvents = recentIncidents.filter(i => i.hostname === node.name)
+            const status = nodeEvents.some(i => i.severity === 'CRITICAL') ? 'threat' : nodeEvents.some(i => i.severity === 'HIGH') ? 'warning' : 'healthy'
+            return (
+              <NodeHealthBar
+                key={node.name}
+                node={node}
+                status={status}
+                recentIncidents={nodeEvents.length}
+              />
+            )
+          })}
         </div>
 
         <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', minHeight: '200px' }}>
@@ -754,13 +1334,21 @@ export default function CommandCenter() {
         </div>
 
         <div style={{ background: '#111827', border: '1px solid rgba(0,255,159,0.08)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace', marginBottom: '4px' }}>Security Layers</div>
-          <SecurityLayerRow name="Falco runtime detection"   status="active"   detail="eBPF · 3 nodes"           icon="🔍" />
-          <SecurityLayerRow name="Kyverno admission control" status="active"   detail="3 policies enforced"       icon="🛡" />
-          <SecurityLayerRow name="Cilium eBPF networking"    status="active"   detail="policy enforcement"        icon="🌐" />
-          <SecurityLayerRow name="Prometheus + Grafana"      status="active"   detail="metrics · 5 dashboards"   icon="📊" />
-          <SecurityLayerRow name="Argus AI agent"            status="active"   detail={`${stats?.total_all_time || incidents.length} decisions`} icon="🧠" />
-          <SecurityLayerRow name="Loki log aggregation"      status="degraded" detail="direct push failing"       icon="📋" />
+          <div style={{ fontSize: '9px', color: '#00ff9f', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'JetBrains Mono, monospace', marginBottom: '4px', display: 'flex', alignItems: 'center' }}>
+            Security Layers
+            <span style={{ fontSize: '7px', color: '#4a5568', letterSpacing: '0', marginLeft: 'auto' }}>last 1m activity</span>
+          </div>
+          {securityLayers.map(layer => (
+            <SecurityLayerRow
+              key={layer.name}
+              name={layer.name}
+              status={layer.status}
+              detail={layer.detail}
+              eventCount={layer.eventCount}
+              activity={layer.activity}
+              updatedAgo={layer.updatedAgo}
+            />
+          ))}
         </div>
       </div>
     </div>
