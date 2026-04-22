@@ -19,6 +19,10 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 </p>
 
 <p align="center">
+  <img src="https://gitviews.com/repo/CodeBuildder/argus-k8s.svg?color=00d4ff" alt="Repo views" />
+</p>
+
+<p align="center">
   <a href="https://drive.google.com/file/d/1oRYc60bNGRirMWPJlLNnzc_XiEa1ogjE/view?usp=sharing" target="_blank" rel="noopener noreferrer"><strong>Watch Demo Video</strong></a>
   ·
   <a href="docs/architecture.md"><strong>Architecture</strong></a>
