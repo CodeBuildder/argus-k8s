@@ -1,5 +1,20 @@
 # Argus — Roadmap
 
+## Sentinel platform integration
+
+In Progress
+
+- Publish completed Argus findings to the shared Sentinel World Model
+- Update entity security posture from high-confidence Argus decisions
+- Preserve local Argus operation when shared platform services are unavailable
+- Normalize Argus security events for Sentinel's cross-agent orchestration
+- Correlate Argus threats with Phoenix failure and recovery evidence
+- Surface cross-domain incident chains and fleet risk in Sentinel
+
+Related repositories: [Sentinel](https://github.com/CodeBuildder/sentinel),
+[Phoenix](https://github.com/CodeBuildder/phoenix), and
+[Sentinel Platform](https://github.com/CodeBuildder/sentinel-platform).
+
 ## Module 1 — Cluster Foundation
 Complete
 

@@ -19,6 +19,11 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 </p>
 
 <p align="center">
+  Argus is the security agent in the broader <strong>Sentinel multi-agent platform</strong>,
+  alongside Phoenix for resilience and Sentinel for fleet-wide orchestration.
+</p>
+
+<p align="center">
   <img src="https://gitviews.com/repo/CodeBuildder/argus-k8s.svg?color=00d4ff" alt="Repo views" />
 </p>
 
@@ -35,6 +40,35 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
     Click to watch the full demo video
   </a>
 </p>
+
+## Part of the Sentinel multi-agent platform
+
+Argus is the security domain agent in a larger autonomous-infrastructure system. It
+continues to detect and respond to threats independently, then reports security findings
+to a shared World Model so the other agents can reason from the same operational state.
+
+| Component | Role | Status |
+|---|---|---|
+| **Argus** (this repo) | Runtime security, policy enforcement, threat reasoning, and guarded remediation | Core pipeline complete; console in progress |
+| [**Phoenix**](https://github.com/CodeBuildder/phoenix) | Chaos engineering, failure diagnosis, blast-radius analysis, and self-healing | Agent and dashboard modules complete |
+| [**Sentinel**](https://github.com/CodeBuildder/sentinel) | Primary multi-agent orchestrator, fleet risk scoring, unified reporting, and command center | Orchestrator and dashboard scaffolding in progress |
+| [**Sentinel Platform**](https://github.com/CodeBuildder/sentinel-platform) | Shared World Model, event contracts, adapters, and deployment integration | Integration layer in progress |
+
+```text
+                Sentinel — multi-agent supervisor
+                   /                       \
+                  /                         \
+       Argus — security              Phoenix — resilience
+                  \                         /
+                   \                       /
+             Shared World Model + platform adapters
+                            |
+             Kubernetes, Cilium, Loki, Prometheus
+```
+
+Argus currently writes completed security findings and entity posture updates to the
+World Model on a best-effort basis. World Model availability never blocks the local
+detection, reasoning, audit, or remediation pipeline.
 
 ## Cluster status
 
@@ -249,8 +283,22 @@ To populate the console with sample incidents:
 ```bash
 curl -X POST http://localhost:8000/simulate-threats \
   -H "Content-Type: application/json" \
-  -d '{"count": 10}'
+  -d '{"count": 10, "scenario": "mixed"}'
 ```
+
+The generator randomizes threat type, workload, blast radius, enrichment evidence, and
+recommended response. Use a seed to replay the exact same selection during tests or a
+recorded demo:
+
+```bash
+curl -X POST http://localhost:8000/simulate-threats \
+  -H "Content-Type: application/json" \
+  -d '{"count": 10, "scenario": "mixed", "seed": 20260717}'
+```
+
+Supported scenarios are `mixed`, `human_approval`, and `attack_chain`. The response
+includes severity and action distributions plus the effective seed. Omitting `seed`
+generates a new random run; reusing the returned seed reproduces its incident selection.
 
 ## Architecture decisions
 

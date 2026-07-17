@@ -116,7 +116,13 @@ export default function FormattedAssistantContent({ content, compact = false }: 
     }
 
     const next = lines[i + 1]
-    if (line.includes('|') && next && /^\|?[-:\s|]+\|?$/.test(next.trim())) {
+    const dividerRemainder = next
+      ?.trim()
+      .split('|').join('')
+      .split('-').join('')
+      .split(':').join('')
+      .trim()
+    if (line.includes('|') && next?.includes('-') && dividerRemainder === '') {
       const headers = parseTableRow(line)
       const rows: string[][] = []
       i += 2
