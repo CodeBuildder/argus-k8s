@@ -32,6 +32,27 @@ Work started during the submission period includes:
 - Input validation, distribution summaries, and automated tests for generated incidents
 - Repository and UI build-quality fixes discovered during Codex-assisted verification
 
+## Phase record
+
+| Phase | Scope | Tracking |
+|---|---|---|
+| Phase 1 | Reproducible randomized incident generation and repository stabilization | Issue #90 / PR #91 |
+| Phase 2 | Argus findings and entity posture synchronization with the Sentinel World Model | Issue #92 |
+
+### Phase 2 — World Model integration
+
+Phase 2 turns Argus into a reliable producer of cross-agent operational state:
+
+- Every accepted Falco alert receives a deterministic UUID derived from the alert's
+  deduplication identity and timestamp.
+- Findings carry the original evidence plus Argus's severity, confidence, assessment,
+  recommended response, false-positive judgment, and blast-radius estimate.
+- Eligible non-false-positive decisions update the affected pod or node posture.
+- Duplicate World Model writes are safe and reported as idempotent outcomes.
+- Transient transport and server failures receive one bounded retry.
+- Disabled or unavailable World Model services never interrupt Argus enrichment,
+  reasoning, audit logging, or remediation.
+
 ## Why the randomized generator exists
 
 The generator serves two different testing modes:

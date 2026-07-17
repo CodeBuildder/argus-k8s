@@ -52,6 +52,9 @@ class Config:
     # Hubble
     HUBBLE_URL: str = os.getenv("HUBBLE_URL", "http://hubble-relay.kube-system.svc.cluster.local:4245")
 
+    # Sentinel platform
+    WORLD_MODEL_URL: str = os.getenv("WORLD_MODEL_URL", "")
+
     # Agent behavior
     AUTO_ISOLATE_CRITICAL: bool = os.getenv("AUTO_ISOLATE_CRITICAL", "false").lower() == "true"
     HUMAN_APPROVAL_TIMEOUT_SECONDS: int = int(os.getenv("HUMAN_APPROVAL_TIMEOUT_SECONDS", "300"))

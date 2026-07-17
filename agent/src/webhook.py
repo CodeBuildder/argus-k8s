@@ -181,6 +181,12 @@ async def process_alert(payload: dict) -> None:
     from reasoning import reason_about_threat
     from actions import route_action
     from audit import audit_log
+    from world_model import (
+        entity_id,
+        patch_entity_posture,
+        post_finding,
+        security_posture_for_decision,
+    )
     import structlog as _log
     _l = _log.get_logger()
     rule = payload.get("rule", "unknown")
@@ -192,6 +198,45 @@ async def process_alert(payload: dict) -> None:
     action_result = await route_action(payload, decision, notify_webhook or None)
     await audit_log(payload, context, decision, action_result)
     _l.info("pipeline_complete", rule=rule, severity=decision.severity.value, action=action_result.get("action"), status=action_result.get("status"))
+
+    # ── Write to World Model (non-blocking, best-effort) ──────────────────────
+    raw_fields = payload.get("raw_fields", {})
+    assessment_dict = {
+        "severity":           decision.severity.value,
+        "confidence":         decision.confidence,
+        "assessment":         decision.assessment,
+        "recommended_action": decision.recommended_action.value,
+        "likely_fp":          decision.likely_false_positive,
+        "blast_radius":       decision.blast_radius,
+    }
+    finding_result = await post_finding(
+        dedup_key=payload.get("dedup_key", rule),
+        raw_fields=raw_fields,
+        rule=rule,
+        priority=payload.get("priority", "informational"),
+        alert_time=payload.get("time", ""),
+        output=payload.get("output", ""),
+        tags=payload.get("tags", []),
+        hostname=payload.get("hostname"),
+        assessment=assessment_dict,
+    )
+
+    # Upgrade entity security posture if reasoning found HIGH/CRITICAL and not FP
+    posture = security_posture_for_decision(
+        decision.severity.value,
+        decision.likely_false_positive,
+    )
+    posture_result = {"status": "skipped", "reason": "posture_not_eligible"}
+    affected_entity_id = entity_id(raw_fields, payload.get("hostname"))
+    if posture and affected_entity_id:
+        posture_result = await patch_entity_posture(affected_entity_id, posture)
+
+    _l.info(
+        "world_model_sync_complete",
+        rule=rule,
+        finding_status=finding_result["status"],
+        posture_status=posture_result["status"],
+    )
 
 
 @router.post("/falco/webhook", status_code=202)
@@ -222,6 +267,7 @@ async def receive_falco_alert(
         return {"status": "deduplicated", "rule": alert.rule}
 
     payload = alert.to_enricher_payload()
+    payload["dedup_key"] = alert.dedup_key()
     background_tasks.add_task(process_alert, payload)
 
     return {
