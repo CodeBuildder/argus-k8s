@@ -13,9 +13,16 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from main import app
+from config import config as app_config
 from webhook import dedup_cache, FalcoAlert, FalcoOutputFields, is_duplicate
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def disable_world_model_for_webhook_tests(monkeypatch):
+    """Keep unit tests isolated from developer-specific .env integration URLs."""
+    monkeypatch.setattr(app_config, "WORLD_MODEL_URL", "")
 
 VALID_ALERT = {
     "rule": "Read sensitive file untrusted",
