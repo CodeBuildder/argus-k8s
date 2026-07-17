@@ -1220,10 +1220,32 @@ async def simulate_threats(request: Request):
     Injects realistic incidents into the incident store.
     """
     body = await request.json()
-    count = body.get("count", 10)
-    scenario = body.get("scenario") or body.get("mode") or "mixed"
+    try:
+        count = int(body.get("count", 10))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail="count must be an integer") from exc
+    if not 1 <= count <= 100:
+        raise HTTPException(status_code=422, detail="count must be between 1 and 100")
+
+    scenario = str(body.get("scenario") or body.get("mode") or "mixed").strip().lower()
+    allowed_scenarios = {"mixed", "human_approval", "attack_chain"}
+    if scenario not in allowed_scenarios:
+        raise HTTPException(
+            status_code=422,
+            detail=f"scenario must be one of: {', '.join(sorted(allowed_scenarios))}",
+        )
+
+    requested_seed = body.get("seed")
+    if requested_seed is None:
+        seed = int.from_bytes(os.urandom(8), "big")
+    else:
+        try:
+            seed = int(requested_seed)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=422, detail="seed must be an integer") from exc
 
     import random
+    rng = random.Random(seed)
 
     # Rich threat templates — each has what_happened (list), action_steps (list), kyverno_blocked, mitre_tags
     threat_templates = [
@@ -1775,21 +1797,21 @@ async def simulate_threats(request: Request):
     chain_templates = [t for rule in chain_rules for t in threat_templates if t.get("rule") == rule]
 
     if scenario == "human_approval":
-        selected_templates = [random.choice(human_templates) for _ in range(max(count, 1))]
+        selected_templates = [rng.choice(human_templates) for _ in range(max(count, 1))]
     elif scenario == "attack_chain":
         selected_templates = [chain_templates[i % len(chain_templates)] for i in range(max(count, len(chain_templates)))]
     else:
-        selected_templates = [random.choice(threat_templates) for _ in range(count)]
+        selected_templates = [rng.choice(threat_templates) for _ in range(count)]
 
     simulated = []
     chains_created = []
     for i in range(count):
         template = selected_templates[i % len(selected_templates)]
         sev = template["severity"]
-        ts = time.time() - random.randint(0, 1800)
+        ts = time.time() - rng.randint(0, 1800)
         namespace = template["namespace"]
         hostname = template["hostname"]
-        pod = random.choice(pods)
+        pod = rng.choice(pods)
         if scenario == "attack_chain":
             ts = time.time() - max(0, (count - i - 1) * 18)
             namespace = "production"
@@ -1802,7 +1824,7 @@ async def simulate_threats(request: Request):
             "namespace": namespace,
             "hostname": hostname,
             "pod": pod,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.fromtimestamp(ts, timezone.utc).isoformat(),
             "event_type": "simulated_threat",
             "priority": "Warning" if sev in ("MED", "MEDIUM", "LOW") else "Critical",
             "assessment": template["what_happened"][0],
@@ -1815,11 +1837,11 @@ async def simulate_threats(request: Request):
             "action_steps": template["action_steps"],
             "likely_false_positive": template["confidence"] < 0.65,
             "recommended_action": template["action_taken"],
-            "blast_radius": random.randint(2, 5) if sev == "CRITICAL" else random.randint(1, 3),
+            "blast_radius": rng.randint(2, 5) if sev == "CRITICAL" else rng.randint(1, 3),
             "action_status": "completed" if template["action_taken"] != "HUMAN_REQUIRED" else "pending_review",
             "action_detail": f"Argus AI: {template['action_taken']} triggered by {template['rule']}",
-            "enrichment_sources": random.sample(["kubernetes", "loki", "hubble", "kyverno"], k=random.randint(2, 4)),
-            "enrichment_duration_ms": random.randint(120, 800),
+            "enrichment_sources": rng.sample(["kubernetes", "loki", "hubble", "kyverno"], k=rng.randint(2, 4)),
+            "enrichment_duration_ms": rng.randint(120, 800),
             "mitre_tags": template.get("mitre_tags", ["T1059"]),
             "suppress_minutes": 0,
         }
@@ -1853,14 +1875,32 @@ async def simulate_threats(request: Request):
     while len(incident_store) > 500:
         incident_store.pop(0)
 
-    log.info("threats_simulated", count=count, total_incidents=len(incident_store))
+    severity_distribution = {
+        severity: len([incident for incident in simulated if incident["severity"] == severity])
+        for severity in sorted({incident["severity"] for incident in simulated})
+    }
+    action_distribution = {
+        action: len([incident for incident in simulated if incident["action_taken"] == action])
+        for action in sorted({incident["action_taken"] for incident in simulated})
+    }
+
+    log.info(
+        "threats_simulated",
+        count=count,
+        scenario=scenario,
+        seed=seed,
+        total_incidents=len(incident_store),
+    )
     return {
         "status": "success",
         "scenario": scenario,
+        "seed": seed,
         "simulated_count": count,
         "total_incidents": len(incident_store),
         "pending_approvals": len([a for a in approval_queue if a.get("status") == "pending"]),
         "chains_created": len(chains_created),
+        "severity_distribution": severity_distribution,
+        "action_distribution": action_distribution,
         "sample_threats": [{"rule": i["rule"], "severity": i["severity"], "kyverno_blocked": i.get("kyverno_blocked", False)} for i in simulated[:5]],
     }
 

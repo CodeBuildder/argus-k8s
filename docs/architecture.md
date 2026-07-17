@@ -1,5 +1,46 @@
 # Argus — Architecture
 
+## Platform context
+
+Argus is one domain agent in the Sentinel multi-agent platform:
+
+```text
+                       ┌──────────────────────────┐
+                       │         Sentinel         │
+                       │  Multi-agent supervisor  │
+                       │ Risk · reports · routing │
+                       └────────────┬─────────────┘
+                                    │
+                         reads shared state
+                                    │
+                       ┌────────────▼─────────────┐
+                       │      World Model         │
+                       │ topology · findings ·    │
+                       │ posture · incident memory│
+                       └───────┬──────────┬───────┘
+                               │          │
+                     writes    │          │    writes
+                   findings    │          │    outcomes
+                               │          │
+                    ┌──────────▼───┐  ┌───▼──────────┐
+                    │    Argus     │  │   Phoenix    │
+                    │  Security    │  │  Resilience  │
+                    └──────────────┘  └──────────────┘
+```
+
+- **Argus** owns runtime threat detection, policy enforcement, security reasoning,
+  and guarded remediation.
+- **Phoenix** owns chaos experiments, failure diagnosis, blast-radius analysis,
+  healing, and recovery verification.
+- **Sentinel** is the primary supervisor. It combines cross-domain findings into
+  fleet risk, routes work, and produces unified operational intelligence.
+- **Sentinel Platform** owns the shared schemas, World Model, adapters, and deployment
+  contract that connect the agents without merging their domain responsibilities.
+
+After Argus finishes its local processing pipeline, it posts a normalized finding and
+updates the affected entity's security posture in the World Model. These writes are
+best-effort: a platform outage cannot block Argus detection or response.
+
 ## Cluster topology
 
 | Node | Role | IP | OS |

@@ -1,4 +1,4 @@
-ag#!/bin/bash
+#!/bin/bash
 set -e
 
 echo "🎯 Creating diverse security threats for Argus detection..."

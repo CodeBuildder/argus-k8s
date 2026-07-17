@@ -1,6 +1,12 @@
 .PHONY: help cluster-up cluster-down cluster-status deploy-cilium deploy-falco \
         deploy-kyverno deploy-observability deploy-agent deploy-ui \
-        hubble-ui grafana-ui k9s clean
+        hubble-ui grafana-ui k9s test test-agent test-ui simulate-threats clean
+
+THREAT_COUNT ?= 10
+THREAT_SCENARIO ?= mixed
+THREAT_SEED ?=
+comma := ,
+THREAT_SEED_FIELD = $(if $(THREAT_SEED),$(comma) "seed": $(THREAT_SEED),)
 
 help:
 	@echo "Argus — available commands:"
@@ -22,6 +28,8 @@ help:
 	@echo "    make deploy-ui             Build and deploy React UI"
 	@echo ""
 	@echo "  Utilities"
+	@echo "    make test                  Run agent tests and build the UI"
+	@echo "    make simulate-threats      Generate randomized demo incidents"
 	@echo "    make hubble-ui             Open Hubble network flow UI"
 	@echo "    make grafana-ui            Port-forward Grafana to localhost:3000"
 	@echo "    make k9s                   Open k9s cluster terminal UI"
@@ -79,6 +87,21 @@ deploy-agent:
 
 deploy-ui:
 	@echo "TODO: implement in Module 5"
+
+test: test-agent test-ui
+
+test-agent:
+	@.venv/bin/python -m pytest -q agent
+
+test-ui:
+	@npm --prefix ui run build
+
+simulate-threats:
+	@curl --fail --silent --show-error \
+		-X POST http://localhost:8000/simulate-threats \
+		-H "Content-Type: application/json" \
+		-d '{"count": $(THREAT_COUNT), "scenario": "$(THREAT_SCENARIO)"$(THREAT_SEED_FIELD)}'
+	@echo
 
 hubble-ui:
 	cilium hubble ui
