@@ -41,6 +41,31 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
   </a>
 </p>
 
+## Quickstart — no cluster required
+
+The fastest path to a populated Argus console requires only Python, Node.js, npm, and
+curl. It does **not** require OrbStack, Kubernetes, Falco, Cilium, an API key, or cloud
+infrastructure.
+
+```bash
+make setup-local
+make demo-local
+```
+
+Then open **http://127.0.0.1:5173**.
+
+`make demo-local` starts the backend and UI, waits for the backend health check, and
+generates ten randomized incidents. Press `Ctrl-C` to stop both services. For every
+command, expected result, testing mode, and troubleshooting path, follow the
+**[Getting Started guide](docs/GETTING_STARTED.md)**.
+
+### Two testing modes
+
+| Mode | Command | Cluster required? | Evidence |
+|---|---|---:|---|
+| Local synthetic | `make demo-local` | No | Generated incidents for console and workflow testing |
+| Full Kubernetes | `bash cluster/test-diverse-threats.sh` | Yes | Real Falco, Cilium, and Kyverno signals |
+
 ## Part of the Sentinel multi-agent platform
 
 Argus is the security domain agent in a larger autonomous-infrastructure system. It
@@ -249,7 +274,10 @@ Kyverno catches a separate category of threat — workloads that violate securit
 | 4 — Detection Agent | Falco webhook, context enrichment, reasoning layer, action router | Complete |
 | 5 — Command & Control UI | React console, threat feed, approval queue, cluster map | In Progress |
 
-## Local setup
+## Full Kubernetes setup
+
+Start with the cluster-free [Quickstart](#quickstart--no-cluster-required) unless you
+specifically need real kernel, network, and admission-control evidence.
 
 ### Prerequisites
 - macOS (Apple Silicon M-series)
@@ -269,29 +297,23 @@ make cluster-status
 cilium hubble ui
 ```
 
-### Run locally (development)
+### Run services separately
 
 **Backend agent:**
 ```bash
-cd agent/src
-source ../.env
-uvicorn main:app --reload --port 8000
+make dev-agent
 ```
 
 **Console UI:**
 ```bash
-cd ui
-npm install
-npm run dev
+make dev-ui
 ```
 
 The UI runs at `http://localhost:5173` and proxies `/api/*` to the agent at port 8000.
 
-To populate the console with sample incidents:
+The backend must be running before generating incidents. To populate the console:
 ```bash
-curl -X POST http://localhost:8000/simulate-threats \
-  -H "Content-Type: application/json" \
-  -d '{"count": 10, "scenario": "mixed"}'
+make simulate-threats THREAT_COUNT=10 THREAT_SCENARIO=mixed
 ```
 
 The generator randomizes threat type, workload, blast radius, enrichment evidence, and
@@ -299,9 +321,10 @@ recommended response. Use a seed to replay the exact same selection during tests
 recorded demo:
 
 ```bash
-curl -X POST http://localhost:8000/simulate-threats \
-  -H "Content-Type: application/json" \
-  -d '{"count": 10, "scenario": "mixed", "seed": 20260717}'
+make simulate-threats \
+  THREAT_COUNT=10 \
+  THREAT_SCENARIO=mixed \
+  THREAT_SEED=20260717
 ```
 
 Supported scenarios are `mixed`, `human_approval`, and `attack_chain`. The response
