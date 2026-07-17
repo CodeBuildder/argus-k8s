@@ -70,6 +70,14 @@ Argus currently writes completed security findings and entity posture updates to
 World Model on a best-effort basis. World Model availability never blocks the local
 detection, reasoning, audit, or remediation pipeline.
 
+For local integration, set the World Model endpoint before starting the agent:
+
+```bash
+export WORLD_MODEL_URL=http://localhost:8100
+```
+
+The Kubernetes deployment uses the in-cluster Sentinel service address automatically.
+
 ## Cluster status
 
 ### Network flow observability

@@ -44,6 +44,8 @@ spec:
               value: "300"
             - name: AUTO_ISOLATE_CRITICAL
               value: "false"
+            - name: WORLD_MODEL_URL
+              value: "http://sentinel-world-model.sentinel-platform.svc.cluster.local:8000"
           resources:
             requests:
               cpu: "100m"

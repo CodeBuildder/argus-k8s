@@ -41,6 +41,36 @@ After Argus finishes its local processing pipeline, it posts a normalized findin
 updates the affected entity's security posture in the World Model. These writes are
 best-effort: a platform outage cannot block Argus detection or response.
 
+### World Model write contract
+
+Argus synchronizes only after its local pipeline has completed enrichment, reasoning,
+action routing, and audit logging:
+
+```text
+Falco alert
+    → enrich → reason → act → audit
+                              |
+                              └─ best-effort World Model sync
+                                   ├─ POST /findings
+                                   └─ PATCH /entities/{entity_id}
+```
+
+Finding IDs are deterministic UUIDs derived from the accepted alert's deduplication key
+and timestamp. Reprocessing the same alert is therefore idempotent, while alerts from
+different pods, processes, namespaces, or times remain distinct.
+
+Entity IDs use the same convention as the Sentinel topology reconciler:
+
+| Kubernetes object | World Model entity ID |
+|---|---|
+| Pod | `pod/{namespace}/{pod-name}` |
+| Node | `node/cluster/{node-name}` |
+
+Critical, high, and medium decisions can raise entity posture when Argus does not classify
+the alert as a likely false positive. Transport failures and World Model 5xx responses
+receive one bounded retry; failures are logged as synchronization outcomes and never
+escape into the local response pipeline.
+
 ## Cluster topology
 
 | Node | Role | IP | OS |

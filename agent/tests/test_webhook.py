@@ -6,7 +6,7 @@ Copyright (c) 2026 Kaushikkumaran
 import time
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import sys
 import os
@@ -53,6 +53,15 @@ class TestWebhookEndpoint:
         assert data["status"] == "accepted"
         assert data["rule"] == "Read sensitive file untrusted"
         assert data["priority"] == "Warning"
+
+    def test_accepted_alert_passes_stable_dedup_identity_to_pipeline(self):
+        dedup_cache.clear()
+        with patch("webhook.process_alert", new=AsyncMock()) as process:
+            response = client.post("/falco/webhook", json=VALID_ALERT)
+
+        assert response.status_code == 202
+        pipeline_payload = process.await_args.args[0]
+        assert pipeline_payload["dedup_key"] == FalcoAlert(**VALID_ALERT).dedup_key()
 
     def test_invalid_alert_missing_rule(self):
         bad_alert = {**VALID_ALERT}
