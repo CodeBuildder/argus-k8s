@@ -1,6 +1,7 @@
 .PHONY: help cluster-up cluster-down cluster-status deploy-cilium deploy-falco \
         deploy-kyverno deploy-observability deploy-agent deploy-ui \
-        hubble-ui grafana-ui k9s test test-agent test-ui simulate-threats clean
+        setup-local dev-agent dev-ui demo-local hubble-ui grafana-ui k9s \
+        test test-agent test-ui simulate-threats clean
 
 THREAT_COUNT ?= 10
 THREAT_SCENARIO ?= mixed
@@ -24,6 +25,10 @@ help:
 	@echo "    make deploy-observability  Install Prometheus + Grafana + Loki"
 	@echo ""
 	@echo "  Application"
+	@echo "    make setup-local           Install local backend and UI dependencies"
+	@echo "    make demo-local            Start a populated cluster-free demo"
+	@echo "    make dev-agent             Start only the backend on localhost:8000"
+	@echo "    make dev-ui                Start only the console on localhost:5173"
 	@echo "    make deploy-agent          Build and deploy AI agent"
 	@echo "    make deploy-ui             Build and deploy React UI"
 	@echo ""
@@ -88,6 +93,22 @@ deploy-agent:
 deploy-ui:
 	@echo "TODO: implement in Module 5"
 
+setup-local:
+	python3 -m venv .venv
+	.venv/bin/pip install -r agent/requirements.txt
+	npm --prefix ui ci
+
+dev-agent:
+	@test -x .venv/bin/python || (echo "Missing local environment. Run: make setup-local" && exit 1)
+	@cd agent/src && ../../.venv/bin/python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
+
+dev-ui:
+	@test -d ui/node_modules || (echo "Missing UI dependencies. Run: make setup-local" && exit 1)
+	@npm --prefix ui run dev -- --host 127.0.0.1
+
+demo-local:
+	@bash scripts/demo-local.sh "$(THREAT_COUNT)" "$(THREAT_SCENARIO)" "$(THREAT_SEED)"
+
 test: test-agent test-ui
 
 test-agent:
@@ -97,6 +118,11 @@ test-ui:
 	@npm --prefix ui run build
 
 simulate-threats:
+	@curl --fail --silent http://localhost:8000/health >/dev/null || \
+		(echo "Argus backend is not running on localhost:8000."; \
+		 echo "Start it with: make dev-agent"; \
+		 echo "Or launch the complete cluster-free demo with: make demo-local"; \
+		 exit 1)
 	@curl --fail --silent --show-error \
 		-X POST http://localhost:8000/simulate-threats \
 		-H "Content-Type: application/json" \

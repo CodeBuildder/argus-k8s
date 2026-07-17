@@ -38,6 +38,7 @@ Work started during the submission period includes:
 |---|---|---|
 | Phase 1 | Reproducible randomized incident generation and repository stabilization | Issue #90 / PR #91 |
 | Phase 2 | Argus findings and entity posture synchronization with the Sentinel World Model | Issue #92 |
+| Phase 3 | Cluster-free setup, launch, simulation, and troubleshooting path | Issue #94 |
 
 ### Phase 2 — World Model integration
 
