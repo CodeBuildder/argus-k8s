@@ -1,7 +1,7 @@
 .PHONY: help cluster-up cluster-down cluster-status deploy-cilium deploy-falco \
         deploy-kyverno deploy-observability deploy-agent deploy-ui \
-        setup-local dev-agent dev-ui demo-local hubble-ui grafana-ui k9s \
-        test test-agent test-ui simulate-threats clean
+        setup-local dev-agent dev-ui demo-local demo-cluster demo-cluster-dry-run hubble-ui grafana-ui k9s \
+        test test-agent test-ui test-cluster-demo simulate-threats clean
 
 THREAT_COUNT ?= 10
 THREAT_SCENARIO ?= mixed
@@ -16,6 +16,8 @@ help:
 	@echo "    make cluster-up            Provision VMs, install k3s, Cilium, namespaces"
 	@echo "    make cluster-down          Stop all OrbStack VMs"
 	@echo "    make cluster-status        Show node and pod status"
+	@echo "    make demo-cluster          Run guarded real-cluster threat demo"
+	@echo "    make demo-cluster-dry-run  Validate cluster prerequisites without changes"
 	@echo ""
 	@echo "  Security"
 	@echo "    make deploy-falco          Install Falco via Helm"
@@ -34,6 +36,7 @@ help:
 	@echo ""
 	@echo "  Utilities"
 	@echo "    make test                  Run agent tests and build the UI"
+	@echo "    make test-cluster-demo     Test cluster-demo safety guards"
 	@echo "    make simulate-threats      Generate randomized demo incidents"
 	@echo "    make hubble-ui             Open Hubble network flow UI"
 	@echo "    make grafana-ui            Port-forward Grafana to localhost:3000"
@@ -109,6 +112,18 @@ dev-ui:
 demo-local:
 	@bash scripts/demo-local.sh "$(THREAT_COUNT)" "$(THREAT_SCENARIO)" "$(THREAT_SEED)"
 
+demo-cluster:
+	@DEMO_CLUSTER_CONTEXT="$(DEMO_CLUSTER_CONTEXT)" \
+	 DEMO_NAMESPACE="$(or $(DEMO_NAMESPACE),argus-demo)" \
+	 DEMO_WAIT_SECONDS="$(or $(DEMO_WAIT_SECONDS),30)" \
+	 DEMO_KEEP_RESOURCES="$(or $(DEMO_KEEP_RESOURCES),false)" \
+	 bash scripts/demo-cluster.sh
+
+demo-cluster-dry-run:
+	@DEMO_NAMESPACE="$(or $(DEMO_NAMESPACE),argus-demo)" \
+	 DEMO_WAIT_SECONDS="$(or $(DEMO_WAIT_SECONDS),30)" \
+	 bash scripts/demo-cluster.sh --dry-run
+
 test: test-agent test-ui
 
 test-agent:
@@ -116,6 +131,9 @@ test-agent:
 
 test-ui:
 	@npm --prefix ui run build
+
+test-cluster-demo:
+	@bash scripts/tests/test-demo-cluster.sh
 
 simulate-threats:
 	@curl --fail --silent http://localhost:8000/health >/dev/null || \

@@ -63,7 +63,19 @@ command, expected result, testing mode, and troubleshooting path, follow the
 | Mode | Command | Cluster required? | Evidence |
 |---|---|---:|---|
 | Local synthetic | `make demo-local` | No | Generated incidents for console and workflow testing |
-| Full Kubernetes | `bash cluster/test-diverse-threats.sh` | Yes | Real Falco, Cilium, and Kyverno signals |
+| Full Kubernetes | `make demo-cluster` | Yes | Real Falco, Cilium, Kyverno, and Argus evidence |
+
+For a guarded, one-command run against an existing cluster with Cilium, Falco,
+Kyverno, and Argus already installed:
+
+```bash
+make demo-cluster
+```
+
+The command displays the active context and requires you to type it exactly before
+creating anything. It uses a dedicated `argus-demo` namespace, collects runtime
+evidence, and deletes that namespace on exit. Run `make demo-cluster-dry-run` for a
+read-only prerequisite check.
 
 ## Part of the Sentinel multi-agent platform
 
