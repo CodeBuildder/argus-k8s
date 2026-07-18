@@ -43,6 +43,16 @@ Work started during the submission period includes:
 | Phase 4 | Guarded real-cluster demo automation and evidence collection | Issue #98 / PR #100 |
 | Phase 5 | Real-cluster agent and console lifecycle integration | Issue #101 / PR #102 |
 | Phase 6 | OpenAI-native reasoning, configuration, deployment, UI status, and documentation | Issue #103 / PR #104 |
+| Phase 7 | One-command deterministic Argus, Phoenix, Sentinel, and SOG judge demo | Issue #110 |
+
+### Phase 7 — deterministic platform demo
+
+`make demo-platform` provides one guarded path through the complete product. It starts
+or reuses the three consoles and their APIs, connects them to the shared SOG, publishes
+seeded Argus replay evidence and a Phoenix simulator recovery outcome for the same
+resource, and verifies the resulting cross-agent incident through Sentinel before
+declaring the demo ready. `make demo-platform-dry-run` validates the environment without
+starting processes, forwarding ports, publishing evidence, or changing cluster state.
 
 ### Phase 6 — OpenAI-native reasoning
 

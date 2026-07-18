@@ -1,7 +1,7 @@
 .PHONY: help cluster-up cluster-down cluster-status deploy-cilium deploy-falco \
         deploy-kyverno deploy-observability deploy-agent deploy-ui \
-        setup-local dev-agent dev-ui demo-local demo-cluster demo-cluster-dry-run hubble-ui grafana-ui k9s \
-        test test-agent test-ui test-cluster-demo simulate-threats clean
+        setup-local dev-agent dev-ui demo-local demo-platform demo-platform-dry-run demo-cluster demo-cluster-dry-run hubble-ui grafana-ui k9s \
+        test test-agent test-ui test-cluster-demo test-platform-demo simulate-threats clean
 
 THREAT_COUNT ?= 10
 THREAT_SCENARIO ?= mixed
@@ -29,6 +29,8 @@ help:
 	@echo "  Application"
 	@echo "    make setup-local           Install local backend and UI dependencies"
 	@echo "    make demo-local            Start a populated cluster-free demo"
+	@echo "    make demo-platform         Start the full Argus + Phoenix + Sentinel judge demo"
+	@echo "    make demo-platform-dry-run Validate the full platform demo without starting anything"
 	@echo "    make dev-agent             Start only the backend on localhost:8000"
 	@echo "    make dev-ui                Start only the console on localhost:5173"
 	@echo "    make deploy-agent          Build and deploy AI agent"
@@ -37,6 +39,7 @@ help:
 	@echo "  Utilities"
 	@echo "    make test                  Run agent tests and build the UI"
 	@echo "    make test-cluster-demo     Test cluster-demo safety guards"
+	@echo "    make test-platform-demo    Test full-platform demo orchestration"
 	@echo "    make simulate-threats      Generate randomized demo incidents"
 	@echo "    make hubble-ui             Open Hubble network flow UI"
 	@echo "    make grafana-ui            Port-forward Grafana to localhost:3000"
@@ -112,6 +115,16 @@ dev-ui:
 demo-local:
 	@bash scripts/demo-local.sh "$(THREAT_COUNT)" "$(THREAT_SCENARIO)" "$(THREAT_SEED)"
 
+demo-platform:
+	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
+	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
+	 bash scripts/demo-platform.sh
+
+demo-platform-dry-run:
+	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
+	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
+	 DEMO_PLATFORM_DRY_RUN=true bash scripts/demo-platform.sh
+
 demo-cluster:
 	@DEMO_CLUSTER_CONTEXT="$(DEMO_CLUSTER_CONTEXT)" \
 	 DEMO_NAMESPACE="$(or $(DEMO_NAMESPACE),argus-demo)" \
@@ -131,6 +144,9 @@ test-agent:
 
 test-ui:
 	@npm --prefix ui run build
+
+test-platform-demo:
+	@bash scripts/tests/test-demo-platform.sh
 
 test-cluster-demo:
 	@bash scripts/tests/test-demo-cluster.sh
