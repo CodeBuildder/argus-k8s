@@ -99,19 +99,38 @@ The UI proxies `/api/*` to the agent at `http://127.0.0.1:8000`.
 
 ## Full-cluster mode
 
-Full-cluster mode provisions three k3s nodes on OrbStack and deploys Cilium, Falco,
-Kyverno, Prometheus, Grafana, Loki, and Argus. Follow [setup.md](../setup.md) for the
-complete prerequisites and deployment sequence.
+The guarded demo works with an existing Kubernetes cluster where Cilium, Falco,
+Kyverno, and Argus are already installed. The repository also includes an OrbStack/k3s
+development-cluster bootstrap; follow [setup.md](../setup.md) when you need that stack.
 
-After the stack is healthy, create real policy-compliant workloads that trigger runtime
-rules:
+After the stack is healthy, run the guarded cluster demo:
 
 ```bash
-bash cluster/test-diverse-threats.sh
+make demo-cluster
 ```
 
-This script requires a working `kubectl` context. It creates real pods and runs continuously
-until those pods are deleted.
+The command prints the active Kubernetes context and API server, then requires the exact
+context name before it creates resources. It validates node, Cilium, Falco, Kyverno, and
+Argus readiness; launches bounded workloads in an isolated `argus-demo` namespace;
+collects evidence; and removes the namespace on exit.
+
+Run the read-only preflight first when using a new cluster:
+
+```bash
+make demo-cluster-dry-run
+```
+
+For non-interactive execution, bind authorization to the exact context:
+
+```bash
+make demo-cluster DEMO_CLUSTER_CONTEXT="$(kubectl config current-context)"
+```
+
+Retain evidence workloads only when deliberately requested:
+
+```bash
+make demo-cluster DEMO_KEEP_RESOURCES=true
+```
 
 ## Troubleshooting
 
