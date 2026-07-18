@@ -45,7 +45,17 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
   </a>
 </p>
 
-## Quickstart — no cluster required
+## Start here
+
+Choose one path. Both finish at the same Argus console on
+**http://127.0.0.1:5173**.
+
+| Path | Use it when | Command |
+|---|---|---|
+| **Local synthetic** | You want the fastest judge/reviewer experience and do not have Kubernetes | `make demo-local` |
+| **Live k3s** | You have the three-node Argus cluster and want real Falco, Cilium, and Kyverno evidence | `make demo-cluster-dry-run`, then `make demo-cluster` |
+
+### Path A — local synthetic, no cluster required
 
 The fastest path to a populated Argus console requires only Python, Node.js, npm, and
 curl. It does **not** require OrbStack, Kubernetes, Falco, Cilium, an API key, or cloud
@@ -64,26 +74,27 @@ use `OPENAI_API_KEY`. Press `Ctrl-C` to stop both services. For every
 command, expected result, testing mode, and troubleshooting path, follow the
 **[Getting Started guide](docs/GETTING_STARTED.md)**.
 
-### Two testing modes
+### Path B — live three-node k3s
 
-| Mode | Command | Cluster required? | Evidence |
-|---|---|---:|---|
-| Local synthetic | `make demo-local` | No | Generated incidents for console and workflow testing |
-| Full Kubernetes | `make demo-cluster` | Yes | Real Falco, Cilium, Kyverno, and Argus evidence |
+This path requires the existing `argus` kubeconfig context with Cilium, Falco,
+Kyverno, and the Argus agent installed. Confirm it without changing the cluster:
 
-For a guarded, one-command run against an existing cluster with Cilium, Falco,
-Kyverno, and Argus already installed:
+```bash
+kubectl config use-context argus
+make demo-cluster-dry-run
+```
+
+If preflight passes, start the bounded live demo:
 
 ```bash
 make demo-cluster
 ```
 
 The command displays the active context and requires you to type it exactly before
-creating anything. It uses a dedicated `argus-demo` namespace, collects runtime
-evidence, and deletes that namespace on exit. Run `make demo-cluster-dry-run` for a
-read-only prerequisite check.
+creating anything. It uses a dedicated `argus-demo` namespace, starts the console,
+collects real runtime evidence, and deletes only that namespace on exit.
 
-### Full k3s demo — existing OrbStack cluster
+### Existing OrbStack cluster versus built-in Kubernetes
 
 OrbStack exposes its own single-node Kubernetes context named `orbstack`. That is
 **not** the Argus cluster. Argus runs on three Ubuntu VMs managed by OrbStack and uses
@@ -124,14 +135,14 @@ deletes only the namespace created by that run.
 
 Argus is the security domain agent in a larger autonomous-infrastructure system. It
 continues to detect and respond to threats independently, then reports security findings
-to a shared World Model so the other agents can reason from the same operational state.
+to a shared Sentinel Operations Graph (SOG) so the other agents can reason from the same operational state.
 
 | Component | Role | Status |
 |---|---|---|
 | **Argus** (this repo) | Runtime security, policy enforcement, threat reasoning, and guarded remediation | Core pipeline complete; console in progress |
 | [**Phoenix**](https://github.com/CodeBuildder/phoenix) | Chaos engineering, failure diagnosis, blast-radius analysis, and self-healing | Agent and dashboard modules complete |
 | [**Sentinel**](https://github.com/CodeBuildder/sentinel) | Primary multi-agent orchestrator, fleet risk scoring, unified reporting, and command center | Orchestrator and dashboard scaffolding in progress |
-| [**Sentinel Platform**](https://github.com/CodeBuildder/sentinel-platform) | Shared World Model, event contracts, adapters, and deployment integration | Integration layer in progress |
+| [**Sentinel Platform**](https://github.com/CodeBuildder/sentinel-platform) | Shared SOG, event contracts, adapters, and deployment integration | Integration layer in progress |
 
 ```text
                 Sentinel — multi-agent supervisor
@@ -140,16 +151,16 @@ to a shared World Model so the other agents can reason from the same operational
        Argus — security              Phoenix — resilience
                   \                         /
                    \                       /
-             Shared World Model + platform adapters
+             Shared SOG + platform adapters
                             |
              Kubernetes, Cilium, Loki, Prometheus
 ```
 
 Argus currently writes completed security findings and entity posture updates to the
-World Model on a best-effort basis. World Model availability never blocks the local
+SOG on a best-effort basis. SOG availability never blocks the local
 detection, reasoning, audit, or remediation pipeline.
 
-For local integration, set the World Model endpoint before starting the agent:
+For local integration, set the SOG endpoint before starting the agent:
 
 ```bash
 export WORLD_MODEL_URL=http://localhost:8100

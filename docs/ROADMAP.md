@@ -4,7 +4,7 @@
 
 In Progress
 
-- Publish completed Argus findings to the shared Sentinel World Model
+- Publish completed Argus findings to the shared Sentinel Operations Graph (SOG)
 - Update entity security posture from high-confidence Argus decisions
 - Preserve local Argus operation when shared platform services are unavailable
 - Normalize Argus security events for Sentinel's cross-agent orchestration

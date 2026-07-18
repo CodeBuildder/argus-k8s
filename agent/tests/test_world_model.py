@@ -1,4 +1,4 @@
-"""Contract and failure-isolation tests for Sentinel World Model publishing."""
+"""Contract and failure-isolation tests for SOG publishing."""
 
 import os
 import sys

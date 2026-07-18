@@ -10,7 +10,7 @@ Before Build Week, the project already included:
 - Argus runtime detection, enrichment, reasoning, remediation, and command console
 - Phoenix chaos injection, failure diagnosis, self-healing agent, and dashboard
 - Sentinel repository scaffolding for the primary multi-agent supervisor
-- Sentinel Platform schemas, adapters, and World Model service
+- Sentinel Platform schemas, adapters, and Sentinel Operations Graph (SOG) service
 
 The existing foundation provides the domain agents and infrastructure. It is not being
 represented as work created during Build Week.
@@ -21,12 +21,12 @@ The Build Week objective is to turn the separate systems into one coordinated au
 resilience platform:
 
 > Argus defends workloads, Phoenix continuously exercises and restores them, and Sentinel
-> coordinates both through a shared World Model—with humans governing risky actions.
+> coordinates both through a shared Sentinel Operations Graph (SOG)—with humans governing risky actions.
 
 Work started during the submission period includes:
 
-- Argus findings and entity posture integration with the shared World Model
-- Phoenix outcome integration with the shared World Model
+- Argus findings and entity posture integration with the shared Sentinel Operations Graph (SOG)
+- Phoenix outcome integration with the shared Sentinel Operations Graph (SOG)
 - Sentinel platform positioning and cross-agent architecture documentation
 - A seeded randomized incident generator for exploratory demos and deterministic replays
 - Input validation, distribution summaries, and automated tests for generated incidents
@@ -38,7 +38,7 @@ Work started during the submission period includes:
 | Phase | Scope | Tracking |
 |---|---|---|
 | Phase 1 | Reproducible randomized incident generation and repository stabilization | Issue #90 / PR #91 |
-| Phase 2 | Argus findings and entity posture synchronization with the Sentinel World Model | Issue #92 |
+| Phase 2 | Argus findings and entity posture synchronization with the Sentinel Operations Graph (SOG) | Issue #92 |
 | Phase 3 | Cluster-free setup, launch, simulation, and troubleshooting path | Issue #94 |
 | Phase 4 | Guarded real-cluster demo automation and evidence collection | Issue #98 / PR #100 |
 | Phase 5 | Real-cluster agent and console lifecycle integration | Issue #101 / PR #102 |
@@ -53,7 +53,7 @@ GPT-5.6 variants. Model failures and malformed responses continue to fail closed
 human review. Kubernetes deployment, network egress, health status, tests, and setup
 instructions use `OPENAI_API_KEY` consistently.
 
-### Phase 2 — World Model integration
+### Phase 2 — SOG integration
 
 Phase 2 turns Argus into a reliable producer of cross-agent operational state:
 
@@ -62,9 +62,9 @@ Phase 2 turns Argus into a reliable producer of cross-agent operational state:
 - Findings carry the original evidence plus Argus's severity, confidence, assessment,
   recommended response, false-positive judgment, and blast-radius estimate.
 - Eligible non-false-positive decisions update the affected pod or node posture.
-- Duplicate World Model writes are safe and reported as idempotent outcomes.
+- Duplicate SOG writes are safe and reported as idempotent outcomes.
 - Transient transport and server failures receive one bounded retry.
-- Disabled or unavailable World Model services never interrupt Argus enrichment,
+- Disabled or unavailable SOG services never interrupt Argus enrichment,
   reasoning, audit logging, or remediation.
 
 ## Why the randomized generator exists

@@ -14,7 +14,7 @@ Argus is one domain agent in the Sentinel multi-agent platform:
                          reads shared state
                                     │
                        ┌────────────▼─────────────┐
-                       │      World Model         │
+                       │      SOG         │
                        │ topology · findings ·    │
                        │ posture · incident memory│
                        └───────┬──────────┬───────┘
@@ -34,14 +34,15 @@ Argus is one domain agent in the Sentinel multi-agent platform:
   healing, and recovery verification.
 - **Sentinel** is the primary supervisor. It combines cross-domain findings into
   fleet risk, routes work, and produces unified operational intelligence.
-- **Sentinel Platform** owns the shared schemas, World Model, adapters, and deployment
+- **Sentinel Platform** owns the shared schemas, Sentinel Operations Graph (SOG),
+  adapters, and deployment
   contract that connect the agents without merging their domain responsibilities.
 
 After Argus finishes its local processing pipeline, it posts a normalized finding and
-updates the affected entity's security posture in the World Model. These writes are
+updates the affected entity's security posture in the SOG. These writes are
 best-effort: a platform outage cannot block Argus detection or response.
 
-### World Model write contract
+### SOG write contract
 
 Argus synchronizes only after its local pipeline has completed enrichment, reasoning,
 action routing, and audit logging:
@@ -50,7 +51,7 @@ action routing, and audit logging:
 Falco alert
     → enrich → reason → act → audit
                               |
-                              └─ best-effort World Model sync
+                              └─ best-effort SOG sync
                                    ├─ POST /findings
                                    └─ PATCH /entities/{entity_id}
 ```
@@ -61,13 +62,13 @@ different pods, processes, namespaces, or times remain distinct.
 
 Entity IDs use the same convention as the Sentinel topology reconciler:
 
-| Kubernetes object | World Model entity ID |
+| Kubernetes object | SOG entity ID |
 |---|---|
 | Pod | `pod/{namespace}/{pod-name}` |
 | Node | `node/cluster/{node-name}` |
 
 Critical, high, and medium decisions can raise entity posture when Argus does not classify
-the alert as a likely false positive. Transport failures and World Model 5xx responses
+the alert as a likely false positive. Transport failures and SOG 5xx responses
 receive one bounded retry; failures are logged as synchronization outcomes and never
 escape into the local response pipeline.
 

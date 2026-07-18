@@ -1,4 +1,4 @@
-"""Best-effort Argus client for the Sentinel World Model."""
+"""Best-effort Argus client for the Sentinel Operations Graph (SOG)."""
 
 import asyncio
 from typing import Any
@@ -36,7 +36,7 @@ def _clean(value: Any) -> str | None:
 
 
 def entity_id(raw_fields: dict, hostname: str | None = None) -> str | None:
-    """Resolve a World Model entity ID from normalized Falco fields."""
+    """Resolve a SOG entity ID from normalized Falco fields."""
     namespace = _clean(raw_fields.get("k8s.ns.name")) or "default"
     pod = _clean(raw_fields.get("k8s.pod.name")) or _clean(raw_fields.get("container.name"))
     if pod:
