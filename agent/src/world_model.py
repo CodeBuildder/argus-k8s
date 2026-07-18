@@ -118,6 +118,7 @@ async def post_finding(
     tags: list,
     hostname: str | None = None,
     assessment: dict | None = None,
+    correlation_id: str | None = None,
 ) -> dict[str, Any]:
     finding_event_id = event_id(dedup_key, alert_time)
     affected_entity_id = entity_id(raw_fields, hostname)
@@ -130,6 +131,7 @@ async def post_finding(
         "priority": priority,
         "tags": tags,
         "raw_fields": raw_fields,
+        "provenance": "observed",
     }
     if assessment:
         payload["assessment"] = assessment
@@ -144,6 +146,8 @@ async def post_finding(
     }
     if affected_entity_id:
         body["entity_id"] = affected_entity_id
+    if correlation_id:
+        body["correlation_id"] = correlation_id
 
     result = await _request("POST", "/findings", body, timeout=8.0)
     log_method = log.warning if result["status"] == "failed" else log.debug
