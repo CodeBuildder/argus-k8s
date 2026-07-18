@@ -114,6 +114,15 @@ async def test_post_finding_preserves_explicit_correlation_id():
 
 
 @pytest.mark.asyncio
+async def test_replay_provenance_cannot_masquerade_as_observed():
+    FakeClient.responses = [response(200, {"status": "accepted"})]
+    await world_model.post_finding(**finding_args(provenance="replayed", replayed=True))
+    body = FakeClient.requests[0][2]
+    assert body["replayed"] is True
+    assert body["payload"]["provenance"] == "replayed"
+
+
+@pytest.mark.asyncio
 async def test_duplicate_is_successful_idempotent_outcome():
     FakeClient.responses = [response(200, {"status": "duplicate"})]
 

@@ -119,6 +119,8 @@ async def post_finding(
     hostname: str | None = None,
     assessment: dict | None = None,
     correlation_id: str | None = None,
+    provenance: str = "observed",
+    replayed: bool = False,
 ) -> dict[str, Any]:
     finding_event_id = event_id(dedup_key, alert_time)
     affected_entity_id = entity_id(raw_fields, hostname)
@@ -131,7 +133,7 @@ async def post_finding(
         "priority": priority,
         "tags": tags,
         "raw_fields": raw_fields,
-        "provenance": "observed",
+        "provenance": provenance,
     }
     if assessment:
         payload["assessment"] = assessment
@@ -142,6 +144,7 @@ async def post_finding(
         "source": "argus",
         "timestamp": alert_time,
         "severity": severity,
+        "replayed": replayed,
         "payload": payload,
     }
     if affected_entity_id:

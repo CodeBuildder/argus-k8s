@@ -220,6 +220,8 @@ async def process_alert(payload: dict) -> None:
         hostname=payload.get("hostname"),
         assessment=assessment_dict,
         correlation_id=payload.get("correlation_id") or raw_fields.get("sentinel.correlation_id"),
+        provenance=payload.get("provenance", "replayed" if payload.get("replayed") else "observed"),
+        replayed=bool(payload.get("replayed")),
     )
 
     # Upgrade entity security posture if reasoning found HIGH/CRITICAL and not FP
