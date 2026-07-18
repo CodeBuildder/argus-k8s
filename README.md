@@ -14,8 +14,12 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 <h1 align="center">Argus</h1>
 
 <p align="center">
-  A Kubernetes security platform combining eBPF-native threat detection,
-  policy enforcement, and an automated reasoning agent for real-time threat response.
+  An OpenAI-native Kubernetes security platform combining eBPF threat detection,
+  policy enforcement, and autonomous reasoning for real-time threat response.
+</p>
+
+<p align="center">
+  <strong>Powered by the OpenAI Responses API and GPT-5.6</strong>
 </p>
 
 <p align="center">
@@ -54,7 +58,9 @@ make demo-local
 Then open **http://127.0.0.1:5173**.
 
 `make demo-local` installs missing dependencies, starts the backend and UI, waits for
-the backend health check, and generates ten randomized incidents. Press `Ctrl-C` to stop both services. For every
+the backend health check, and generates ten randomized incidents. Synthetic workflows
+run without an API key; live reasoning, summaries, threat hunting, forecasts, and chat
+use `OPENAI_API_KEY`. Press `Ctrl-C` to stop both services. For every
 command, expected result, testing mode, and troubleshooting path, follow the
 **[Getting Started guide](docs/GETTING_STARTED.md)**.
 
@@ -105,8 +111,9 @@ make demo-cluster
 ```
 
 Expected preflight components are three ready k3s nodes plus Cilium, Falco, Kyverno,
-and the Argus agent. At the confirmation prompt, type the exact context printed by the
-command (`argus` for this repository's OrbStack cluster).
+and the OpenAI-powered Argus agent. The agent deployment must receive `OPENAI_API_KEY`,
+and the OpenAI project must have API quota. At the confirmation prompt, type the exact
+context printed by the command (`argus` for this repository's OrbStack cluster).
 
 `make demo-cluster` starts a supervised service port-forward and the React console,
 injects the real workloads, prints terminal evidence, and keeps the console available
@@ -216,9 +223,10 @@ Falco sits at the syscall layer — below the application, below the container r
 - Pod metadata, recent logs, network flows, and policy violations collected per alert
 
 **Issue #15: Reasoning layer**
+- OpenAI Responses API with GPT-5.6 model routing
 - Structured JSON decisions: severity, confidence, recommended action, blast radius
 - Model routing based on alert severity
-- Prompt caching on system prompt reduces token cost on repeat calls
+- Cached-input token usage is captured in the audit telemetry when available
 - Retry with exponential backoff on rate limit and connection errors
 
 **Issue #16: Action router**
@@ -236,7 +244,7 @@ Falco sits at the syscall layer — below the application, below the container r
 - `make deploy-agent` target wired up
 
 **Network policies configured**
-- argus-agent allowed egress to external reasoning API
+- argus-agent allowed egress to `api.openai.com`
 - argus-agent allowed egress to monitoring/kube-system/prod/staging namespaces
 - Loki, Hubble, K8s API all reachable from agent pod
 

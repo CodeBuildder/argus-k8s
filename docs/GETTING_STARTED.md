@@ -21,7 +21,14 @@ Falco, Cilium, or Kyverno evidence.
 - curl
 
 No API key, OrbStack VM, Kubernetes cluster, Falco, Cilium, or Kyverno installation is
-required.
+required for the synthetic incident workflow. To use live AI reasoning, summaries,
+threat hunting, forecasting, or chat, add this to the repository `.env`:
+
+```bash
+OPENAI_API_KEY=your_key_here
+```
+
+The key requires available OpenAI API quota. Never commit `.env`.
 
 ### 1. Launch the populated demo
 
@@ -102,6 +109,8 @@ The UI proxies `/api/*` to the agent at `http://127.0.0.1:8000`.
 The guarded demo works with an existing Kubernetes cluster where Cilium, Falco,
 Kyverno, and Argus are already installed. The repository also includes an OrbStack/k3s
 development-cluster bootstrap; follow [setup.md](../setup.md) when you need that stack.
+The Argus deployment consumes `OPENAI_API_KEY` from the `argus-secrets` Kubernetes
+Secret and uses the OpenAI Responses API for its live reasoning workflows.
 
 OrbStack's built-in `orbstack` Kubernetes context is separate from the three-node k3s
 cluster. Select the Argus context before preflight:
@@ -141,6 +150,8 @@ make demo-cluster-dry-run
 | `Missing local environment` | Python dependencies are not installed | Run `make setup-local` |
 | Port 8000 or 5173 is already in use | Another local service is running | Stop it, then rerun `make demo-local` |
 | Console opens but has no incidents | The backend was restarted or never seeded | Run `make simulate-threats` |
+| AI panels report `OPENAI_API_KEY not configured` | The agent started without an OpenAI credential | Add `OPENAI_API_KEY` to `.env` locally or redeploy the cluster agent with `OPENAI_API_KEY=... make deploy-agent` |
+| OpenAI returns `429 insufficient_quota` | The API project has no available credit or billing quota | Enable API billing or add credits in the OpenAI Platform, then retry |
 | Cluster panels show no live data | Local synthetic mode has no Kubernetes telemetry | Use full-cluster mode for real telemetry |
 | `kubectl` connection failure | Full-cluster mode is not configured | Complete [setup.md](../setup.md) |
 | Cilium missing while the three OrbStack VMs are running | The `orbstack` context is selected instead of the k3s cluster | Run `kubectl config use-context argus`, then repeat the dry run |
