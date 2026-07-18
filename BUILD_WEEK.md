@@ -44,6 +44,15 @@ Work started during the submission period includes:
 | Phase 5 | Real-cluster agent and console lifecycle integration | Issue #101 / PR #102 |
 | Phase 6 | OpenAI-native reasoning, configuration, deployment, UI status, and documentation | Issue #103 / PR #104 |
 | Phase 7 | One-command deterministic Argus, Phoenix, Sentinel, and SOG judge demo | Issue #110 |
+| Phase 8 | Auditable judge evidence scorecard and JSON/Markdown run artifacts | Issue #112 |
+
+### Phase 8 — judge evidence report
+
+Every successful deterministic platform run now emits a concise PASS scorecard and
+stores the verified lifecycle as JSON and Markdown. The report preserves correlation,
+sources, provenance, seed, governance, OpenAI configuration, recovery state, and measured
+orchestration timings. It explicitly avoids claiming live detection latency or 100%
+availability from replayed and simulated evidence.
 
 ### Phase 7 — deterministic platform demo
 

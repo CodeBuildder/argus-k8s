@@ -173,6 +173,14 @@ one deterministic Argus security finding and one Phoenix recovery outcome agains
 same resource; and refuses to report success until Sentinel exposes their correlated
 incident with explicit `replayed` and `simulator` provenance.
 
+Every successful run prints a judge-readable PASS scorecard and writes the exact proof
+to `artifacts/demo-platform/latest-demo.json` and
+`artifacts/demo-platform/latest-demo.md`. The report includes evidence-publication and
+correlation timings, recovery status, approval policy, OpenAI availability, sources,
+seed, and provenance. It deliberately reports availability as **not measured** for this
+deterministic path instead of turning a simulator recovery into a false production-SLA
+claim.
+
 | Console | URL | What to show |
 |---|---|---|
 | Argus | **http://127.0.0.1:5173** | Security evidence and response |
