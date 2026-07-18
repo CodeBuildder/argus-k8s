@@ -164,8 +164,9 @@ make demo-cluster
 
 Type `argus` when asked to confirm the active context. The command creates only the
 `argus-demo` namespace, launches bounded workloads, waits for telemetry, prints real
-Falco/Argus/Kyverno evidence, and deletes the namespace on exit. `Ctrl-C` also runs the
-scoped cleanup.
+Falco/Argus/Kyverno evidence, forwards the in-cluster agent, and starts the React
+console at [http://127.0.0.1:5173](http://127.0.0.1:5173). It remains active until
+`Ctrl-C`, which stops the console and port-forward and deletes the demo namespace.
 
 ## 7. Console UI
 
@@ -178,13 +179,12 @@ npm run dev
 
 The console runs at `http://localhost:5173`. All `/api/*` requests are proxied to the agent at `http://localhost:8000`.
 
-For a cluster agent, first forward the in-cluster service in a separate terminal:
+`make demo-cluster` handles the cluster service port-forward and console automatically.
+When developing the UI separately, the equivalent manual port-forward is:
 
 ```bash
 kubectl port-forward -n argus-system svc/argus-agent 8000:80
 ```
-
-Cluster UI startup is not yet integrated into `make demo-cluster`.
 
 ### Optional: populate the local synthetic API
 

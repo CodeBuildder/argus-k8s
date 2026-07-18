@@ -108,8 +108,10 @@ Expected preflight components are three ready k3s nodes plus Cilium, Falco, Kyve
 and the Argus agent. At the confirmation prompt, type the exact context printed by the
 command (`argus` for this repository's OrbStack cluster).
 
-`make demo-cluster` currently collects real cluster evidence in the terminal. It does
-not yet launch the React console; cluster UI startup is the next integration step.
+`make demo-cluster` starts a supervised service port-forward and the React console,
+injects the real workloads, prints terminal evidence, and keeps the console available
+at **http://127.0.0.1:5173** until `Ctrl-C`. Cleanup stops both local processes and
+deletes only the namespace created by that run.
 
 ## Part of the Sentinel multi-agent platform
 
