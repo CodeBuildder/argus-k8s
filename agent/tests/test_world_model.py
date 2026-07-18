@@ -102,6 +102,24 @@ async def test_post_finding_uses_world_model_contract():
     assert body["severity"] == "critical"
     assert body["payload"]["finding_type"] == "falco_alert"
     assert body["payload"]["description"] == "Unexpected shell spawned"
+    assert body["payload"]["provenance"] == "observed"
+
+
+@pytest.mark.asyncio
+async def test_post_finding_preserves_explicit_correlation_id():
+    FakeClient.responses = [response(200, {"status": "accepted"})]
+    await world_model.post_finding(**finding_args(correlation_id="case-argus-phoenix-1"))
+    body = FakeClient.requests[0][2]
+    assert body["correlation_id"] == "case-argus-phoenix-1"
+
+
+@pytest.mark.asyncio
+async def test_replay_provenance_cannot_masquerade_as_observed():
+    FakeClient.responses = [response(200, {"status": "accepted"})]
+    await world_model.post_finding(**finding_args(provenance="replayed", replayed=True))
+    body = FakeClient.requests[0][2]
+    assert body["replayed"] is True
+    assert body["payload"]["provenance"] == "replayed"
 
 
 @pytest.mark.asyncio
