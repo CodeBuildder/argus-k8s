@@ -1,6 +1,6 @@
 .PHONY: help cluster-up cluster-down cluster-status deploy-cilium deploy-falco \
         deploy-kyverno deploy-observability deploy-agent deploy-ui \
-        setup-local dev-agent dev-ui demo-local demo-platform demo-platform-dry-run demo-cluster demo-cluster-dry-run hubble-ui grafana-ui k9s \
+        setup-local dev-agent dev-ui demo-local demo-platform demo-platform-local demo-platform-live demo-platform-dry-run demo-platform-live-dry-run demo-cluster demo-cluster-dry-run hubble-ui grafana-ui k9s \
         test test-agent test-ui test-cluster-demo test-platform-demo simulate-threats clean
 
 THREAT_COUNT ?= 10
@@ -29,8 +29,11 @@ help:
 	@echo "  Application"
 	@echo "    make setup-local           Install local backend and UI dependencies"
 	@echo "    make demo-local            Start a populated cluster-free demo"
-	@echo "    make demo-platform         Start the full Argus + Phoenix + Sentinel judge demo"
-	@echo "    make demo-platform-dry-run Validate the full platform demo without starting anything"
+	@echo "    make demo-platform         Start the cluster-free full-platform judge demo"
+	@echo "    make demo-platform-local   Same cluster-free full-platform judge demo"
+	@echo "    make demo-platform-live    Start the real k3s-backed platform proof"
+	@echo "    make demo-platform-dry-run Validate local demo prerequisites without changes"
+	@echo "    make demo-platform-live-dry-run Validate live k3s prerequisites without changes"
 	@echo "    make dev-agent             Start only the backend on localhost:8000"
 	@echo "    make dev-ui                Start only the console on localhost:5173"
 	@echo "    make deploy-agent          Build and deploy AI agent"
@@ -118,9 +121,23 @@ demo-local:
 demo-platform:
 	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
 	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
+	 SENTINEL_PLATFORM_ROOT="$${SENTINEL_PLATFORM_ROOT:-$(abspath ../sentinel-stack/sentinel-platform)}" \
+	 bash scripts/demo-platform-local.sh
+
+demo-platform-local: demo-platform
+
+demo-platform-live:
+	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
+	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
 	 bash scripts/demo-platform.sh
 
 demo-platform-dry-run:
+	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
+	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
+	 SENTINEL_PLATFORM_ROOT="$${SENTINEL_PLATFORM_ROOT:-$(abspath ../sentinel-stack/sentinel-platform)}" \
+	 DEMO_PLATFORM_DRY_RUN=true bash scripts/demo-platform-local.sh
+
+demo-platform-live-dry-run:
 	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
 	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
 	 DEMO_PLATFORM_DRY_RUN=true bash scripts/demo-platform.sh

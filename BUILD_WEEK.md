@@ -45,6 +45,16 @@ Work started during the submission period includes:
 | Phase 6 | OpenAI-native reasoning, configuration, deployment, UI status, and documentation | Issue #103 / PR #104 |
 | Phase 7 | One-command deterministic Argus, Phoenix, Sentinel, and SOG judge demo | Issue #110 |
 | Phase 8 | Auditable judge evidence scorecard and JSON/Markdown run artifacts | Issue #112 |
+| Phase 9 | Cluster-free full-platform judge demo and explicit live-k3s command | Issue #114 |
+
+### Phase 9 — portable judge demo
+
+`make demo-platform` now defaults to the cluster-free path: a disposable local SOG,
+real local product services, an explicitly synthetic three-node topology, deterministic
+Argus and Phoenix lifecycles, and a bounded dynamic feed. `make demo-platform-live`
+preserves the k3s-backed integration proof. The split prevents “safe” from being confused
+with “cluster-free” and keeps simulated evidence visually useful without mislabeling it
+as live production telemetry.
 
 ### Phase 8 — judge evidence report
 
