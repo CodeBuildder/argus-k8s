@@ -124,7 +124,8 @@ make demo-cluster
 The command prints the active Kubernetes context and API server, then requires the exact
 context name before it creates resources. It validates node, Cilium, Falco, Kyverno, and
 Argus readiness; launches bounded workloads in an isolated `argus-demo` namespace;
-collects evidence; and removes the namespace on exit.
+starts the React console against the in-cluster agent; collects evidence; and remains
+available until `Ctrl-C` removes the namespace and stops the supervised local processes.
 
 Run the read-only preflight first when using a new cluster:
 
@@ -144,7 +145,7 @@ make demo-cluster-dry-run
 | `kubectl` connection failure | Full-cluster mode is not configured | Complete [setup.md](../setup.md) |
 | Cilium missing while the three OrbStack VMs are running | The `orbstack` context is selected instead of the k3s cluster | Run `kubectl config use-context argus`, then repeat the dry run |
 | `make cluster-up` reports that machines already exist | The k3s VMs are already provisioned | Do not recreate them; select `argus` and run `make demo-cluster-dry-run` |
-| Cluster demo finishes without opening a browser | The current cluster runner collects terminal evidence only | Use the manual port-forward in [setup.md](../setup.md); integrated UI startup is pending |
+| Cluster console URL does not respond | Port 8000 or 5173 is occupied, or the service port-forward exited | Stop the conflicting local process and rerun `make demo-cluster`; startup prints the failed child-process log |
 
 ## Verify the repository
 

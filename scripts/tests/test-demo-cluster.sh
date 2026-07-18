@@ -23,4 +23,9 @@ expect_failure "rejects short evidence window" env DEMO_WAIT_SECONDS=1 bash "$sc
 expect_failure "rejects long evidence window" env DEMO_WAIT_SECONDS=301 bash "$script" --dry-run
 expect_failure "rejects unknown arguments" bash "$script" --destroy-everything
 
+grep -q 'kubectl port-forward --address 127.0.0.1' "$script"
+grep -q 'http://127.0.0.1:5173/api/health' "$script"
+grep -q 'namespace_created=true' "$script"
+grep -q 'Press Ctrl-C to stop the console' "$script"
+
 echo "demo-cluster guard tests passed"

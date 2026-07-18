@@ -16,7 +16,7 @@ help:
 	@echo "    make cluster-up            Provision VMs, install k3s, Cilium, namespaces"
 	@echo "    make cluster-down          Stop all OrbStack VMs"
 	@echo "    make cluster-status        Show node and pod status"
-	@echo "    make demo-cluster          Run guarded real-cluster threat demo"
+	@echo "    make demo-cluster          Run real-cluster threats and console"
 	@echo "    make demo-cluster-dry-run  Validate cluster prerequisites without changes"
 	@echo ""
 	@echo "  Security"
