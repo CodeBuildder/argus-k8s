@@ -989,6 +989,7 @@ export default function CommandCenter() {
   const [backendLive, setBackendLive] = useState(false)
   const [lastRefresh, setLastRefresh] = useState('')
   const [simulating, setSimulating] = useState(false)
+  const [simulationStatus, setSimulationStatus] = useState('')
   const [sparkData] = useState(() => ({
     critical: Array.from({ length: 12 }, () => 0),
     events: Array.from({ length: 12 }, () => 0),
@@ -997,23 +998,34 @@ export default function CommandCenter() {
 
   const simulateThreats = async (scenario = 'mixed', count = 20) => {
     setSimulating(true)
+    setSimulationStatus('')
+    const controller = new AbortController()
+    const timeout = window.setTimeout(() => controller.abort(), 5000)
     try {
       const response = await fetch(`${API}/simulate-threats`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count, scenario })
+        body: JSON.stringify({ count, scenario }),
+        signal: controller.signal,
       })
-      if (response.ok) {
-        // Refresh incidents immediately
-        const iRes = await fetch(`${API}/incidents?limit=50`)
-        if (iRes.ok) {
-          const data = await iRes.json()
-          if (data.incidents) setIncidents(data.incidents)
-        }
+      if (!response.ok) throw new Error(`simulation returned ${response.status}`)
+      const result = await response.json()
+      const iRes = await fetch(`${API}/incidents?limit=50`, { signal: controller.signal })
+      if (!iRes.ok) throw new Error(`incident refresh returned ${iRes.status}`)
+      const data = await iRes.json()
+      if (data.incidents) {
+        setIncidents(data.incidents)
       }
+      setSimulationStatus(`Injected ${result.simulated_count ?? count} threats`)
     } catch (error) {
       console.error('Failed to simulate threats:', error)
+      setSimulationStatus(
+        error instanceof DOMException && error.name === 'AbortError'
+          ? 'Simulation timed out — restart make demo-local'
+          : 'Simulation failed — check backend health'
+      )
     } finally {
+      window.clearTimeout(timeout)
       setSimulating(false)
     }
   }
@@ -1048,43 +1060,6 @@ export default function CommandCenter() {
     fetchAll()
     const t = setInterval(fetchAll, 5000)
     return () => clearInterval(t)
-  }, [])
-
-  // Seed backend incidents on first load if the backend is empty.
-  useEffect(() => {
-    const autoSimulate = async () => {
-      // Wait a bit for initial data fetch
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // If we have less than 10 incidents or they're all the same type, simulate diverse threats
-      if (incidents.length < 10) {
-        const uniqueRules = new Set(incidents.map(i => i.rule))
-        if (uniqueRules.size < 3) {
-          console.log('Seeding backend threat stream for live dashboard data')
-          await simulateThreats('mixed', 20)
-        }
-      }
-    }
-
-    autoSimulate()
-  }, []) // Run once on mount
-
-  // Periodically add new diverse threats (every 45 seconds)
-  useEffect(() => {
-    const periodicSimulate = setInterval(async () => {
-      // Add 3-5 new threats periodically to keep things interesting
-      try {
-        await fetch(`${API}/simulate-threats`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ count: 3, scenario: 'mixed' })
-        })
-      } catch (error) {
-        console.error('Periodic simulation failed:', error)
-      }
-    }, 45000) // Every 45 seconds
-
-    return () => clearInterval(periodicSimulate)
   }, [])
 
   const kpis = stats
@@ -1214,6 +1189,11 @@ export default function CommandCenter() {
           <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: backendLive ? '#00ff9f' : '#ff9f0a', animation: backendLive ? 'liveBlink 1.4s infinite' : 'none' }} />
           {backendLive ? `backend live${lastRefresh ? ` · ${lastRefresh}` : ''}` : 'backend disconnected'}
         </span>
+        {simulationStatus && (
+          <span style={{ fontSize: '8px', color: simulationStatus.startsWith('Injected') ? '#00ff9f' : '#ff9f0a', fontFamily: 'JetBrains Mono, monospace' }}>
+            {simulationStatus}
+          </span>
+        )}
         <button
         onClick={() => simulateThreats('human_approval', 3)}
         disabled={simulating}

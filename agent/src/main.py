@@ -75,6 +75,10 @@ def _load_kube_client_config():
         return "kubeconfig"
 
 
+def _is_local_demo() -> bool:
+    return os.getenv("ARGUS_LOCAL_DEMO", "false").lower() in {"1", "true", "yes"}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("argus_agent_starting", version="0.1.0")
@@ -105,6 +109,7 @@ async def health():
         "status": "ok",
         "service": "argus-agent",
         "version": "0.1.0",
+        "mode": "local_demo" if _is_local_demo() else "cluster",
         "anthropic_configured": bool(app_config.ANTHROPIC_API_KEY),
         "anthropic_key_hint": (
             f"...{app_config.ANTHROPIC_API_KEY[-4:]}" if app_config.ANTHROPIC_API_KEY else None
@@ -409,6 +414,8 @@ async def get_cluster_overview():
     }
 
     try:
+        if _is_local_demo():
+            raise RuntimeError("Kubernetes discovery disabled in local-demo mode")
         from kubernetes import client, config
 
         kube_mode = _load_kube_client_config()
@@ -584,6 +591,8 @@ async def get_infra_observability():
     generated_at = datetime.now(timezone.utc).isoformat()
 
     try:
+        if _is_local_demo():
+            raise RuntimeError("Kubernetes discovery disabled in local-demo mode")
         from kubernetes import client, config
 
         if os.getenv("IN_CLUSTER", "true").lower() == "true":
@@ -775,7 +784,8 @@ async def get_infra_observability():
         }
 
     except Exception as e:
-        log.warning("infra_observability_k8s_fallback", error=str(e))
+        if not _is_local_demo():
+            log.warning("infra_observability_k8s_fallback", error=str(e))
         recent = [i for i in incident_store if i.get("ts", 0) > now - 3600]
         namespaces = sorted({str(i.get("namespace") or "default") for i in recent} | {"default", "kube-system"})
 

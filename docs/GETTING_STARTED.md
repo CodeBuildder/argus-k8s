@@ -23,18 +23,9 @@ Falco, Cilium, or Kyverno evidence.
 No API key, OrbStack VM, Kubernetes cluster, Falco, Cilium, or Kyverno installation is
 required.
 
-### 1. Install dependencies
+### 1. Launch the populated demo
 
 From the repository root:
-
-```bash
-make setup-local
-```
-
-This creates `.venv`, installs the agent requirements, and installs the locked UI
-dependencies with `npm ci`.
-
-### 2. Launch the populated demo
 
 ```bash
 make demo-local
@@ -42,7 +33,7 @@ make demo-local
 
 The command performs the complete startup sequence:
 
-1. Verify local dependencies.
+1. Install missing Python and UI dependencies.
 2. Confirm ports 8000 and 5173 are available.
 3. Start the FastAPI agent.
 4. Start the Vite console.
@@ -53,7 +44,9 @@ The command performs the complete startup sequence:
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Press `Ctrl-C` in the terminal to
 stop both services.
 
-### 3. Generate another batch
+`make setup-local` remains available if you prefer to install dependencies separately.
+
+### 2. Generate another batch
 
 While `make demo-local` is running, use a second terminal:
 
