@@ -103,6 +103,18 @@ The guarded demo works with an existing Kubernetes cluster where Cilium, Falco,
 Kyverno, and Argus are already installed. The repository also includes an OrbStack/k3s
 development-cluster bootstrap; follow [setup.md](../setup.md) when you need that stack.
 
+OrbStack's built-in `orbstack` Kubernetes context is separate from the three-node k3s
+cluster. Select the Argus context before preflight:
+
+```bash
+kubectl config get-contexts
+kubectl config use-context argus
+kubectl get nodes -o wide
+```
+
+The expected nodes are `k3s-master`, `k3s-worker1`, and `k3s-worker2`. If the output
+contains one node named `orbstack`, the wrong cluster is selected.
+
 After the stack is healthy, run the guarded cluster demo:
 
 ```bash
@@ -120,18 +132,6 @@ Run the read-only preflight first when using a new cluster:
 make demo-cluster-dry-run
 ```
 
-For non-interactive execution, bind authorization to the exact context:
-
-```bash
-make demo-cluster DEMO_CLUSTER_CONTEXT="$(kubectl config current-context)"
-```
-
-Retain evidence workloads only when deliberately requested:
-
-```bash
-make demo-cluster DEMO_KEEP_RESOURCES=true
-```
-
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -142,6 +142,9 @@ make demo-cluster DEMO_KEEP_RESOURCES=true
 | Console opens but has no incidents | The backend was restarted or never seeded | Run `make simulate-threats` |
 | Cluster panels show no live data | Local synthetic mode has no Kubernetes telemetry | Use full-cluster mode for real telemetry |
 | `kubectl` connection failure | Full-cluster mode is not configured | Complete [setup.md](../setup.md) |
+| Cilium missing while the three OrbStack VMs are running | The `orbstack` context is selected instead of the k3s cluster | Run `kubectl config use-context argus`, then repeat the dry run |
+| `make cluster-up` reports that machines already exist | The k3s VMs are already provisioned | Do not recreate them; select `argus` and run `make demo-cluster-dry-run` |
+| Cluster demo finishes without opening a browser | The current cluster runner collects terminal evidence only | Use the manual port-forward in [setup.md](../setup.md); integrated UI startup is pending |
 
 ## Verify the repository
 
