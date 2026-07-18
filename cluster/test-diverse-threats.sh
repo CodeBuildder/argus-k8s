@@ -1,17 +1,19 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+namespace="${DEMO_NAMESPACE:-argus-demo}"
 
 echo "🎯 Creating diverse security threats for Argus detection..."
 echo "These pods comply with Kyverno policies but trigger Falco runtime rules"
 echo ""
 
 # Clean up any existing threat pods first
-kubectl delete pods -l 'threat-type' --force --grace-period=0 2>/dev/null || true
+kubectl delete pods -n "$namespace" -l 'threat-type' --force --grace-period=0 2>/dev/null || true
 sleep 2
 
 # 1. Shell spawn in container (Falco will detect shell execution)
 echo "1️⃣ Creating pod that spawns shell..."
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -n "$namespace" -f -
 apiVersion: v1
 kind: Pod
 metadata:
@@ -25,7 +27,7 @@ spec:
     fsGroup: 1000
   containers:
   - name: shell-spawner
-    image: docker.io/library/busybox:latest
+    image: docker.io/library/busybox:1.36.1
     command: ["sh"]
     args: ["-c", "while true; do sh -c 'echo spawning shell'; sleep 5; done"]
     securityContext:
@@ -44,7 +46,7 @@ EOF
 
 # 2. File access patterns (Falco will detect sensitive file reads)
 echo "2️⃣ Creating pod that reads sensitive files..."
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -n "$namespace" -f -
 apiVersion: v1
 kind: Pod
 metadata:
@@ -58,7 +60,7 @@ spec:
     fsGroup: 1000
   containers:
   - name: file-reader
-    image: docker.io/library/busybox:latest
+    image: docker.io/library/busybox:1.36.1
     command: ["sh"]
     args: ["-c", "while true; do cat /etc/passwd /etc/group 2>/dev/null || true; sleep 10; done"]
     securityContext:
@@ -77,7 +79,7 @@ EOF
 
 # 3. Process execution patterns
 echo "3️⃣ Creating pod with suspicious process execution..."
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -n "$namespace" -f -
 apiVersion: v1
 kind: Pod
 metadata:
@@ -91,7 +93,7 @@ spec:
     fsGroup: 1000
   containers:
   - name: process-spawner
-    image: docker.io/library/busybox:latest
+    image: docker.io/library/busybox:1.36.1
     command: ["sh"]
     args: ["-c", "while true; do ps aux 2>/dev/null || ps; ls -la /proc 2>/dev/null || true; sleep 20; done"]
     securityContext:
@@ -110,7 +112,7 @@ EOF
 
 # 4. File modification attempts
 echo "4️⃣ Creating pod that attempts file modifications..."
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -n "$namespace" -f -
 apiVersion: v1
 kind: Pod
 metadata:
@@ -124,7 +126,7 @@ spec:
     fsGroup: 1000
   containers:
   - name: file-modifier
-    image: docker.io/library/busybox:latest
+    image: docker.io/library/busybox:1.36.1
     command: ["sh"]
     args: ["-c", "while true; do touch /tmp/suspicious-file; echo 'data' > /tmp/suspicious-file; rm /tmp/suspicious-file 2>/dev/null || true; sleep 8; done"]
     securityContext:
@@ -143,7 +145,7 @@ EOF
 
 # 5. Network activity simulation
 echo "5️⃣ Creating pod with network activity..."
-cat <<EOF | kubectl apply -f -
+cat <<EOF | kubectl apply -n "$namespace" -f -
 apiVersion: v1
 kind: Pod
 metadata:
@@ -157,7 +159,7 @@ spec:
     fsGroup: 1000
   containers:
   - name: network-scanner
-    image: docker.io/library/busybox:latest
+    image: docker.io/library/busybox:1.36.1
     command: ["sh"]
     args: ["-c", "while true; do wget -T 2 -O /dev/null http://example.com 2>/dev/null || true; sleep 15; done"]
     securityContext:
@@ -184,10 +186,10 @@ echo "   - File modification patterns"
 echo "   - Network activity"
 echo ""
 echo "🔍 Check the Argus UI Command Center for detections"
-echo "⏱️  Pods will run continuously until deleted"
+echo "⏱️  The demo-cluster wrapper observes these pods, then deletes the demo namespace"
 echo ""
 echo "To view pod status:"
-echo "  kubectl get pods -l 'threat-type'"
+echo "  kubectl get pods -n $namespace -l 'threat-type'"
 echo ""
 echo "To clean up all threat pods:"
-echo "  kubectl delete pods -l 'threat-type' --force --grace-period=0"
+echo "  kubectl delete namespace $namespace"

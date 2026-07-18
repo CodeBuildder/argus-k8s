@@ -20,12 +20,40 @@ ANTHROPIC_API_KEY=your_key_here
 
 ---
 
-## 1. Cluster setup
+## 1. Choose fresh setup or existing cluster
+
+OrbStack has a built-in Kubernetes cluster whose context is normally `orbstack`.
+Argus does not use it. Argus uses a separate, real three-node k3s cluster running
+inside the `k3s-master`, `k3s-worker1`, and `k3s-worker2` OrbStack machines.
+
+Inspect what already exists before provisioning anything:
+
+```bash
+orb list
+kubectl config get-contexts
+```
+
+If the three `k3s-*` machines and the `argus` context already exist, reuse them:
+
+```bash
+kubectl config use-context argus
+kubectl get nodes -o wide
+make demo-cluster-dry-run
+```
+
+Do not run `make cluster-up` against an existing installation. The bootstrap scripts
+create fixed machine names and are not an idempotent upgrade workflow.
+
+## 2. Fresh cluster setup
 
 ### Provision the VMs and install k3s
 ```bash
 make cluster-up
 ```
+
+The bootstrap is designed for this repository owner's current OrbStack layout. Before
+using it on another workstation, review the username, SSH key, and IP variables in
+`cluster/bootstrap/*.sh`; they are currently environment-specific.
 
 This runs four steps in sequence:
 1. Provisions three OrbStack VMs (`k3s-master`, `k3s-worker1`, `k3s-worker2`) running Ubuntu 22.04 ARM64
@@ -35,10 +63,14 @@ This runs four steps in sequence:
 
 ### Verify the cluster is healthy
 ```bash
+kubectl config use-context argus
 make cluster-status
 ```
 
 Expected output: 3 nodes in Ready state, Cilium status shows all agents operational.
+
+If you see one node named `orbstack`, you selected OrbStack's built-in Kubernetes
+context. Switch back with `kubectl config use-context argus`.
 
 ### Open the Hubble network flow UI
 ```bash
@@ -47,7 +79,7 @@ cilium hubble ui
 
 ---
 
-## 2. Security stack
+## 3. Security stack
 
 ### Deploy Falco (runtime threat detection)
 ```bash
@@ -68,11 +100,14 @@ Installs Kyverno and applies three policies:
 
 ---
 
-## 3. Observability
+## 4. Observability
 
-### Deploy Prometheus, Grafana, and Loki
+The repository's `make deploy-observability` target is currently a placeholder. Do not
+rely on it for a fresh installation. On the maintained Argus cluster, verify the
+existing Prometheus, Grafana, Loki, and Promtail workloads with:
+
 ```bash
-make deploy-observability
+kubectl get pods -n monitoring
 ```
 
 ### Access Grafana
@@ -83,7 +118,7 @@ make grafana-ui
 
 ---
 
-## 4. Detection agent
+## 5. Detection agent
 
 ### Deploy to cluster
 ```bash
@@ -112,7 +147,27 @@ The agent exposes these endpoints:
 
 ---
 
-## 5. Console UI
+## 6. Run the guarded real-cluster demo
+
+First perform the read-only preflight:
+
+```bash
+kubectl config use-context argus
+make demo-cluster-dry-run
+```
+
+It must report ready Cilium, Falco, Kyverno, and Argus components. Then run:
+
+```bash
+make demo-cluster
+```
+
+Type `argus` when asked to confirm the active context. The command creates only the
+`argus-demo` namespace, launches bounded workloads, waits for telemetry, prints real
+Falco/Argus/Kyverno evidence, and deletes the namespace on exit. `Ctrl-C` also runs the
+scoped cleanup.
+
+## 7. Console UI
 
 ### Install dependencies and start
 ```bash
@@ -123,7 +178,19 @@ npm run dev
 
 The console runs at `http://localhost:5173`. All `/api/*` requests are proxied to the agent at `http://localhost:8000`.
 
-### Populate with sample data
+For a cluster agent, first forward the in-cluster service in a separate terminal:
+
+```bash
+kubectl port-forward -n argus-system svc/argus-agent 8000:80
+```
+
+Cluster UI startup is not yet integrated into `make demo-cluster`.
+
+### Optional: populate the local synthetic API
+
+This endpoint creates synthetic UI data. It is not evidence from Falco, Cilium, or
+Kyverno and is not part of the full-cluster demo.
+
 ```bash
 curl -X POST http://localhost:8000/simulate-threats \
   -H "Content-Type: application/json" \
@@ -168,3 +235,28 @@ The Kyverno admission webhook must be ready before any workload deployments. Wai
 **Cilium not ready after cluster-up**
 
 Cilium takes 60–90 seconds to initialize on first install. Run `cilium status --wait` to block until all agents are healthy.
+
+**`demo-cluster-dry-run` says Cilium is missing, but the k3s VMs are running**
+
+Check the selected context:
+
+```bash
+kubectl config current-context
+kubectl config get-contexts
+```
+
+If it prints `orbstack`, that is the separate built-in cluster. Run:
+
+```bash
+kubectl config use-context argus
+make demo-cluster-dry-run
+```
+
+**Threat pods remain after an interrupted manual test**
+
+The guarded runner deletes its namespace automatically. For manual recovery, delete
+only the labelled demo namespace:
+
+```bash
+kubectl delete namespace argus-demo --ignore-not-found
+```

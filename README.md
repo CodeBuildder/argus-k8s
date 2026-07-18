@@ -63,7 +63,53 @@ command, expected result, testing mode, and troubleshooting path, follow the
 | Mode | Command | Cluster required? | Evidence |
 |---|---|---:|---|
 | Local synthetic | `make demo-local` | No | Generated incidents for console and workflow testing |
-| Full Kubernetes | `bash cluster/test-diverse-threats.sh` | Yes | Real Falco, Cilium, and Kyverno signals |
+| Full Kubernetes | `make demo-cluster` | Yes | Real Falco, Cilium, Kyverno, and Argus evidence |
+
+For a guarded, one-command run against an existing cluster with Cilium, Falco,
+Kyverno, and Argus already installed:
+
+```bash
+make demo-cluster
+```
+
+The command displays the active context and requires you to type it exactly before
+creating anything. It uses a dedicated `argus-demo` namespace, collects runtime
+evidence, and deletes that namespace on exit. Run `make demo-cluster-dry-run` for a
+read-only prerequisite check.
+
+### Full k3s demo — existing OrbStack cluster
+
+OrbStack exposes its own single-node Kubernetes context named `orbstack`. That is
+**not** the Argus cluster. Argus runs on three Ubuntu VMs managed by OrbStack and uses
+the kubeconfig context named `argus`.
+
+```text
+OrbStack application
+├── built-in Kubernetes → context: orbstack → node: orbstack
+└── Linux machines
+    ├── k3s-master  ┐
+    ├── k3s-worker1 ├→ context: argus → real three-node k3s cluster
+    └── k3s-worker2 ┘
+```
+
+If those three machines already exist, do **not** run `make cluster-up` again. Select
+and verify the existing cluster:
+
+```bash
+orb list
+kubectl config get-contexts
+kubectl config use-context argus
+kubectl get nodes -o wide
+make demo-cluster-dry-run
+make demo-cluster
+```
+
+Expected preflight components are three ready k3s nodes plus Cilium, Falco, Kyverno,
+and the Argus agent. At the confirmation prompt, type the exact context printed by the
+command (`argus` for this repository's OrbStack cluster).
+
+`make demo-cluster` currently collects real cluster evidence in the terminal. It does
+not yet launch the React console; cluster UI startup is the next integration step.
 
 ## Part of the Sentinel multi-agent platform
 
@@ -110,9 +156,9 @@ The Kubernetes deployment uses the in-cluster Sentinel service address automatic
 
 | Node | Role | IP | Status |
 |---|---|---|---|
-| k3s-master | Control plane | 192.168.139.42 | Active |
-| k3s-worker1 | Worker | 192.168.139.77 | Active |
-| k3s-worker2 | Worker | 192.168.139.45 | Active |
+| k3s-master | Control plane | 192.168.139.42 | Ready — k3s v1.34.6 |
+| k3s-worker1 | Worker | 192.168.139.77 | Ready — k3s v1.34.6 |
+| k3s-worker2 | Worker | 192.168.139.45 | Ready — k3s v1.34.6 |
 
 **Cilium:** v1.15.0 — eBPF mode, kube-proxy replacement enabled
 **Hubble:** Relay + UI enabled — live network flow observability active
@@ -278,57 +324,17 @@ Kyverno catches a separate category of threat — workloads that violate securit
 Start with the cluster-free [Quickstart](#quickstart--no-cluster-required) unless you
 specifically need real kernel, network, and admission-control evidence.
 
-### Prerequisites
-- macOS (Apple Silicon M-series)
-- OrbStack installed (`brew install orbstack`)
-- CLI tools: `brew install kubectl helm k3sup cilium-cli hubble k9s`
+Use exactly one of these paths:
 
-### Spin up the cluster
-```bash
-make cluster-up
-```
+- Existing `k3s-*` OrbStack machines: select `argus`, run the dry-run, then run
+  `make demo-cluster`.
+- Fresh Apple Silicon workstation: review the environment-specific bootstrap variables,
+  run `make cluster-up`, deploy the required security components, then run the dry-run.
 
-This provisions 3 OrbStack VMs, installs k3s, deploys Cilium with eBPF kube-proxy replacement, enables Hubble, and creates all namespaces.
-
-### Verify the cluster
-```bash
-make cluster-status
-cilium hubble ui
-```
-
-### Run services separately
-
-**Backend agent:**
-```bash
-make dev-agent
-```
-
-**Console UI:**
-```bash
-make dev-ui
-```
-
-The UI runs at `http://localhost:5173` and proxies `/api/*` to the agent at port 8000.
-
-The backend must be running before generating incidents. To populate the console:
-```bash
-make simulate-threats THREAT_COUNT=10 THREAT_SCENARIO=mixed
-```
-
-The generator randomizes threat type, workload, blast radius, enrichment evidence, and
-recommended response. Use a seed to replay the exact same selection during tests or a
-recorded demo:
-
-```bash
-make simulate-threats \
-  THREAT_COUNT=10 \
-  THREAT_SCENARIO=mixed \
-  THREAT_SEED=20260717
-```
-
-Supported scenarios are `mixed`, `human_approval`, and `attack_chain`. The response
-includes severity and action distributions plus the effective seed. Omitting `seed`
-generates a new random run; reusing the returned seed reproduces its incident selection.
+The complete commands, expected output, context explanation, manual cluster UI path,
+and troubleshooting guide are in [setup.md](setup.md). Do not use `make dev-agent` or
+`make simulate-threats` as substitutes for real-cluster evidence; those commands run
+the local synthetic application path.
 
 ## Architecture decisions
 

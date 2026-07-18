@@ -99,19 +99,38 @@ The UI proxies `/api/*` to the agent at `http://127.0.0.1:8000`.
 
 ## Full-cluster mode
 
-Full-cluster mode provisions three k3s nodes on OrbStack and deploys Cilium, Falco,
-Kyverno, Prometheus, Grafana, Loki, and Argus. Follow [setup.md](../setup.md) for the
-complete prerequisites and deployment sequence.
+The guarded demo works with an existing Kubernetes cluster where Cilium, Falco,
+Kyverno, and Argus are already installed. The repository also includes an OrbStack/k3s
+development-cluster bootstrap; follow [setup.md](../setup.md) when you need that stack.
 
-After the stack is healthy, create real policy-compliant workloads that trigger runtime
-rules:
+OrbStack's built-in `orbstack` Kubernetes context is separate from the three-node k3s
+cluster. Select the Argus context before preflight:
 
 ```bash
-bash cluster/test-diverse-threats.sh
+kubectl config get-contexts
+kubectl config use-context argus
+kubectl get nodes -o wide
 ```
 
-This script requires a working `kubectl` context. It creates real pods and runs continuously
-until those pods are deleted.
+The expected nodes are `k3s-master`, `k3s-worker1`, and `k3s-worker2`. If the output
+contains one node named `orbstack`, the wrong cluster is selected.
+
+After the stack is healthy, run the guarded cluster demo:
+
+```bash
+make demo-cluster
+```
+
+The command prints the active Kubernetes context and API server, then requires the exact
+context name before it creates resources. It validates node, Cilium, Falco, Kyverno, and
+Argus readiness; launches bounded workloads in an isolated `argus-demo` namespace;
+collects evidence; and removes the namespace on exit.
+
+Run the read-only preflight first when using a new cluster:
+
+```bash
+make demo-cluster-dry-run
+```
 
 ## Troubleshooting
 
@@ -123,6 +142,9 @@ until those pods are deleted.
 | Console opens but has no incidents | The backend was restarted or never seeded | Run `make simulate-threats` |
 | Cluster panels show no live data | Local synthetic mode has no Kubernetes telemetry | Use full-cluster mode for real telemetry |
 | `kubectl` connection failure | Full-cluster mode is not configured | Complete [setup.md](../setup.md) |
+| Cilium missing while the three OrbStack VMs are running | The `orbstack` context is selected instead of the k3s cluster | Run `kubectl config use-context argus`, then repeat the dry run |
+| `make cluster-up` reports that machines already exist | The k3s VMs are already provisioned | Do not recreate them; select `argus` and run `make demo-cluster-dry-run` |
+| Cluster demo finishes without opening a browser | The current cluster runner collects terminal evidence only | Use the manual port-forward in [setup.md](../setup.md); integrated UI startup is pending |
 
 ## Verify the repository
 
