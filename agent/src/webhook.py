@@ -199,7 +199,7 @@ async def process_alert(payload: dict) -> None:
     await audit_log(payload, context, decision, action_result)
     _l.info("pipeline_complete", rule=rule, severity=decision.severity.value, action=action_result.get("action"), status=action_result.get("status"))
 
-    # ── Write to World Model (non-blocking, best-effort) ──────────────────────
+    # ── Write to SOG (non-blocking, best-effort) ──────────────────────
     raw_fields = payload.get("raw_fields", {})
     assessment_dict = {
         "severity":           decision.severity.value,

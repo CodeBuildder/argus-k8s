@@ -124,14 +124,14 @@ deletes only the namespace created by that run.
 
 Argus is the security domain agent in a larger autonomous-infrastructure system. It
 continues to detect and respond to threats independently, then reports security findings
-to a shared World Model so the other agents can reason from the same operational state.
+to a shared Sentinel Operations Graph (SOG) so the other agents can reason from the same operational state.
 
 | Component | Role | Status |
 |---|---|---|
 | **Argus** (this repo) | Runtime security, policy enforcement, threat reasoning, and guarded remediation | Core pipeline complete; console in progress |
 | [**Phoenix**](https://github.com/CodeBuildder/phoenix) | Chaos engineering, failure diagnosis, blast-radius analysis, and self-healing | Agent and dashboard modules complete |
 | [**Sentinel**](https://github.com/CodeBuildder/sentinel) | Primary multi-agent orchestrator, fleet risk scoring, unified reporting, and command center | Orchestrator and dashboard scaffolding in progress |
-| [**Sentinel Platform**](https://github.com/CodeBuildder/sentinel-platform) | Shared World Model, event contracts, adapters, and deployment integration | Integration layer in progress |
+| [**Sentinel Platform**](https://github.com/CodeBuildder/sentinel-platform) | Shared SOG, event contracts, adapters, and deployment integration | Integration layer in progress |
 
 ```text
                 Sentinel — multi-agent supervisor
@@ -140,16 +140,16 @@ to a shared World Model so the other agents can reason from the same operational
        Argus — security              Phoenix — resilience
                   \                         /
                    \                       /
-             Shared World Model + platform adapters
+             Shared SOG + platform adapters
                             |
              Kubernetes, Cilium, Loki, Prometheus
 ```
 
 Argus currently writes completed security findings and entity posture updates to the
-World Model on a best-effort basis. World Model availability never blocks the local
+SOG on a best-effort basis. SOG availability never blocks the local
 detection, reasoning, audit, or remediation pipeline.
 
-For local integration, set the World Model endpoint before starting the agent:
+For local integration, set the SOG endpoint before starting the agent:
 
 ```bash
 export WORLD_MODEL_URL=http://localhost:8100
