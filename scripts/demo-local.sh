@@ -48,7 +48,8 @@ fi
 echo "Starting Argus backend at http://127.0.0.1:8000 ..."
 (
   cd "${repo_root}/agent/src"
-  exec ../../.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
+  exec env ARGUS_LOCAL_DEMO=true IN_CLUSTER=false \
+    ../../.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
 ) &
 agent_pid=$!
 
