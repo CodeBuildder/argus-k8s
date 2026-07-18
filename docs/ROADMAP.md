@@ -39,7 +39,9 @@ Prometheus metrics collection, Grafana dashboards (25 default K8s dashboards + 4
 ## Module 4 — Detection Agent
 Complete
 
-Falco webhook receiver, context enricher (kubectl + Loki + Hubble + Kyverno), reasoning layer with structured decision output, action router (LOG / NOTIFY / ISOLATE / KILL / HUMAN_REQUIRED), audit logger, containerized deployment with RBAC.
+Falco webhook receiver, context enricher (kubectl + Loki + Hubble + Kyverno), OpenAI
+Responses API reasoning with structured decision output, action router (LOG / NOTIFY /
+ISOLATE / KILL / HUMAN_REQUIRED), audit logger, and containerized deployment with RBAC.
 
 ---
 
@@ -54,6 +56,7 @@ In Progress
 - Security posture — incident summary, secret scanning, CVE exposure, compliance signals
 - Approval queue — human review workflow for low-confidence automated actions
 - Agent chat — conversational queries about current cluster security state
+- OpenAI-powered incident summaries, threat hunting, forecasting, and operator chat
 - Infrastructure observability — node metrics and resource usage
 
 ### Tech stack

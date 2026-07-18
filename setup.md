@@ -13,9 +13,9 @@ This guide covers everything needed to run Argus locally: spinning up the cluste
 brew install orbstack kubectl helm k3sup cilium-cli hubble k9s
 ```
 
-**Credentials:** You need an API key from Anthropic to run the reasoning agent. Set it in `agent/.env`:
+**Credentials:** You need an OpenAI API key to run the reasoning agent. Set it in the repository `.env`:
 ```
-ANTHROPIC_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
 ```
 
 ---
@@ -122,7 +122,7 @@ make grafana-ui
 
 ### Deploy to cluster
 ```bash
-ANTHROPIC_API_KEY=your_key make deploy-agent
+OPENAI_API_KEY=your_key make deploy-agent
 ```
 
 ### Run locally for development

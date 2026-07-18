@@ -6,7 +6,7 @@ Sends enriched Falco alert context to the reasoning API and returns a structured
 threat assessment decision.
 
 Design principles:
-  - System prompt is cached via Anthropic prompt caching (saves ~90% tokens on repeat calls)
+  - Uses the OpenAI Responses API for agentic reasoning
   - High-severity alerts use the higher-accuracy model, others use the fast model
   - Invalid model responses default to HUMAN_REQUIRED — never fail open
   - Full token usage logged to audit trail for cost tracking
@@ -17,15 +17,14 @@ import json
 import asyncio
 from enum import Enum
 from typing import Any
-import anthropic
+import openai
 from pydantic import BaseModel, field_validator
 import structlog
 
 log = structlog.get_logger()
 
-MODEL_PREFIX = "cl" + "aude"
-SONNET_MODEL = f"{MODEL_PREFIX}-sonnet-4-6"
-OPUS_MODEL = f"{MODEL_PREFIX}-opus-4-6"
+FAST_MODEL = "gpt-5.6-luna"
+REASONING_MODEL = "gpt-5.6"
 
 SYSTEM_PROMPT = """You are Argus, an autonomous Kubernetes security analyst. You explain security incidents in plain English that any engineer can understand — not just security experts.
 
@@ -240,13 +239,12 @@ Top CVEs: {json.dumps(vulnerabilities.get("top_cves", []))}""")
 
 def _select_model(alert: dict) -> str:
     """
-    Use Opus for critical/high alerts, Sonnet for everything else.
-    Opus is more accurate for high-stakes decisions; Sonnet is faster and cheaper.
+    Use the flagship model for critical alerts and the efficient model otherwise.
     """
     priority = alert.get("priority", "").upper()
     if priority in ("CRITICAL", "ERROR"):
-        return OPUS_MODEL
-    return SONNET_MODEL
+        return REASONING_MODEL
+    return FAST_MODEL
 
 
 async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
@@ -255,7 +253,7 @@ async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
 
     Args:
         context: Enriched context dict from enricher.py
-        api_key: Anthropic API key
+        api_key: OpenAI API key
 
     Returns:
         AgentDecision with structured threat assessment.
@@ -278,21 +276,12 @@ async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
 
     for attempt in range(3):
         try:
-            client = anthropic.AsyncAnthropic(api_key=api_key)
-
-            response = await client.messages.create(
+            client = openai.AsyncOpenAI(api_key=api_key)
+            response = await client.responses.create(
                 model=model,
-                max_tokens=1024,
-                system=[
-                    {
-                        "type": "text",
-                        "text": SYSTEM_PROMPT,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-                messages=[
-                    {"role": "user", "content": user_prompt}
-                ],
+                instructions=SYSTEM_PROMPT,
+                input=user_prompt,
+                max_output_tokens=1024,
             )
 
             # Log token usage for cost tracking
@@ -301,13 +290,12 @@ async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
                 "reasoning_tokens",
                 rule=rule,
                 model=model,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                cache_read_tokens=getattr(usage, "cache_read_input_tokens", 0),
-                cache_write_tokens=getattr(usage, "cache_creation_input_tokens", 0),
+                input_tokens=getattr(usage, "input_tokens", 0),
+                output_tokens=getattr(usage, "output_tokens", 0),
+                cache_read_tokens=getattr(getattr(usage, "input_tokens_details", None), "cached_tokens", 0),
             )
 
-            raw_text = response.content[0].text.strip()
+            raw_text = response.output_text.strip()
 
             # Strip markdown fences if the model wraps the JSON response.
             if raw_text.startswith("```"):
@@ -329,12 +317,12 @@ async def reason_about_threat(context: dict, api_key: str) -> AgentDecision:
 
             return decision
 
-        except anthropic.RateLimitError:
+        except openai.RateLimitError:
             wait = 2 ** attempt
             log.warning("reasoning_rate_limited", attempt=attempt, wait_seconds=wait)
             await asyncio.sleep(wait)
 
-        except anthropic.APIConnectionError as e:
+        except openai.APIConnectionError as e:
             wait = 2 ** attempt
             log.warning("reasoning_api_connection_error", attempt=attempt, error=str(e), wait_seconds=wait)
             await asyncio.sleep(wait)

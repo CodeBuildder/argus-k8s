@@ -29,7 +29,7 @@ Argus is one domain agent in the Sentinel multi-agent platform:
 ```
 
 - **Argus** owns runtime threat detection, policy enforcement, security reasoning,
-  and guarded remediation.
+  and guarded remediation. Its AI workflows use the OpenAI Responses API.
 - **Phoenix** owns chaos experiments, failure diagnosis, blast-radius analysis,
   healing, and recovery verification.
 - **Sentinel** is the primary supervisor. It combines cross-domain findings into
@@ -107,9 +107,9 @@ Syscall event (kernel)
         |                       Detects C2 callbacks, lateral movement, DNS tunneling,
         |                       cross-namespace policy violations.
         |
-  [ Argus Agent — Layer 5 ]  ← Receives alerts from Falco webhook, enriches with
-                                cluster context, scores severity and confidence,
-                                routes to the appropriate response action.
+  [ Argus Agent — Layer 5 ]  ← Enriches Falco alerts, sends structured context to
+                                OpenAI GPT-5.6 through the Responses API, validates
+                                the decision, and routes a guarded response action.
 ```
 
 ---
@@ -120,7 +120,7 @@ When a Falco alert arrives at the agent:
 
 1. **Webhook receiver** (`webhook.py`) — validates the JSON payload, normalizes priority levels, checks deduplication cache (same rule+pod+namespace suppressed for 5 minutes), returns 202 immediately so Falco never blocks
 2. **Context enricher** (`enricher.py`) — queries in parallel: pod metadata from kubectl, recent logs from Loki, network flows from Hubble, active policy violations from Kyverno. 5-second hard timeout with graceful degradation
-3. **Reasoning layer** (`reasoning.py`) — takes the alert + enriched context, produces a structured decision: severity, confidence score (0–1), recommended action, blast radius assessment, false positive likelihood
+3. **OpenAI reasoning layer** (`reasoning.py`) — sends the alert and enriched context through the OpenAI Responses API, then validates a structured decision containing severity, confidence score (0–1), recommended action, blast radius assessment, and false-positive likelihood. Critical alerts use GPT-5.6; routine high-volume analysis uses a cost-efficient GPT-5.6 variant. Invalid or unavailable responses fail closed to `HUMAN_REQUIRED`.
 4. **Action router** (`actions.py`) — executes based on the decision:
    - `LOG` — write to audit trail
    - `NOTIFY` — Slack or PagerDuty webhook
@@ -148,7 +148,7 @@ Namespace: monitoring
 
 Namespace: argus-system
   - Allow egress to production, staging, monitoring, kube-system
-  - Allow egress to external reasoning API
+  - Allow egress to the OpenAI API at `api.openai.com`
 ```
 
 Cross-namespace traffic that does not match an explicit allow rule is dropped and visible as a denied flow in Hubble.
@@ -166,9 +166,9 @@ The web console runs as a React app that talks to the agent's REST API:
 /chains         → Attack Chains     — correlated multi-stage attack sequences
 /cluster        → Cluster Map       — node/pod topology with threat overlay
 /posture        → Security Posture  — incident summary, CVE exposure, compliance
-/hunt           → Threat Hunting    — ad-hoc queries and investigation tools
+/hunt           → Threat Hunting    — OpenAI-translated investigation queries
 /infra          → Infrastructure    — node metrics and resource utilization
-/chat           → Agent Chat        — conversational interface to cluster state
+/chat           → Agent Chat        — OpenAI-powered interface to cluster state
 ```
 
 All pages pull from the agent's REST endpoints and auto-refresh on a polling interval. The console does not require a WebSocket connection — all real-time behavior is achieved via periodic fetches.

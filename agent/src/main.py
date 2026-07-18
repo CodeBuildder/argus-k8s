@@ -3,7 +3,7 @@ Argus Agent — FastAPI entrypoint
 Copyright (c) 2026 Kaushikkumaran
 
 Entry point for the Argus AI agent. Receives Falco webhook alerts,
-enriches with cluster context, reasons via Claude API, routes actions.
+enriches with cluster context, reasons via the OpenAI Responses API, routes actions.
 """
 
 import json
@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from openai import OpenAI
 
 from config import config as app_config
 from webhook import router as webhook_router
@@ -110,9 +111,9 @@ async def health():
         "service": "argus-agent",
         "version": "0.1.0",
         "mode": "local_demo" if _is_local_demo() else "cluster",
-        "anthropic_configured": bool(app_config.ANTHROPIC_API_KEY),
-        "anthropic_key_hint": (
-            f"...{app_config.ANTHROPIC_API_KEY[-4:]}" if app_config.ANTHROPIC_API_KEY else None
+        "openai_configured": bool(app_config.OPENAI_API_KEY),
+        "openai_key_hint": (
+            f"...{app_config.OPENAI_API_KEY[-4:]}" if app_config.OPENAI_API_KEY else None
         ),
     }
 
@@ -862,11 +863,10 @@ async def get_infra_observability():
 @app.post("/incidents/summarize")
 async def summarize_incidents(request: Request):
     """
-    Generate an AI-powered summary of recent incidents using Claude.
+    Generate an OpenAI-powered summary of recent incidents.
     Analyzes patterns, trends, and provides actionable insights.
     """
     import os
-    from anthropic import Anthropic
     
     body = await request.json()
     time_window = body.get("time_window", 3600)  # Default 1 hour
@@ -878,7 +878,7 @@ async def summarize_incidents(request: Request):
     if not recent:
         return {"summary": "No incidents in the specified time window.", "insights": []}
     
-    # Prepare incident data for Claude
+    # Prepare incident data for OpenAI
     incident_summary = []
     for inc in recent[-20:]:  # Last 20 incidents
         incident_summary.append({
@@ -891,12 +891,12 @@ async def summarize_incidents(request: Request):
             "likely_false_positive": inc.get("likely_false_positive", False)
         })
     
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
-        return {"error": "ANTHROPIC_API_KEY not configured"}
+        return {"error": "OPENAI_API_KEY not configured"}
     
     try:
-        client = Anthropic(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         
         prompt = f"""Analyze these {len(recent)} security incidents from the last {time_window//60} minutes and provide:
 
@@ -917,13 +917,13 @@ Statistics:
 
 Provide a concise, actionable summary for security operators."""
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}]
+        response = client.responses.create(
+            model="gpt-5.6-terra",
+            max_output_tokens=1500,
+            input=prompt,
         )
         
-        summary_text = response.content[0].text
+        summary_text = response.output_text
         
         return {
             "summary": summary_text,
@@ -935,21 +935,20 @@ Provide a concise, actionable summary for security operators."""
 
     except Exception as e:
         log.error("incident_summary_failed", error=str(e))
-        if "invalid x-api-key" in str(e).lower() or "authentication_error" in str(e).lower():
+        if "api key" in str(e).lower() or "authentication" in str(e).lower():
             return {
-                "error": "Argus AI could not authenticate with Anthropic. Rotate or replace ANTHROPIC_API_KEY in the running agent environment, then restart the agent.",
-                "code": "anthropic_authentication_failed",
+                "error": "Argus AI could not authenticate with OpenAI. Rotate or replace OPENAI_API_KEY in the running agent environment, then restart the agent.",
+                "code": "openai_authentication_failed",
             }
         return {"error": f"Failed to generate summary: {str(e)}"}
 
 @app.post("/threat-hunt")
 async def threat_hunt(request: Request):
     """
-    Natural language threat hunting powered by Claude.
+    Natural language threat hunting powered by OpenAI.
     Translates NL queries to Hubble/Loki/K8s API queries.
     """
     import os
-    from anthropic import Anthropic
     
     body = await request.json()
     nl_query = body.get("query", "")
@@ -957,12 +956,12 @@ async def threat_hunt(request: Request):
     if not nl_query:
         return {"error": "Query is required"}
     
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
-        return {"error": "ANTHROPIC_API_KEY not configured"}
+        return {"error": "OPENAI_API_KEY not configured"}
     
     try:
-        client = Anthropic(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         
         prompt = f"""You are a Kubernetes security analyst. Translate this natural language query into the appropriate system query.
 
@@ -985,14 +984,13 @@ Format your response as JSON:
   "explanation": "what this query does"
 }}"""
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=500,
-            messages=[{"role": "user", "content": prompt}]
+        response = client.responses.create(
+            model="gpt-5.6-luna",
+            max_output_tokens=500,
+            input=prompt,
         )
         
-        # Parse Claude's response
-        response_text = response.content[0].text
+        response_text = response.output_text
 
         query_info = _extract_json_object(response_text) or {
             "source": "loki",
@@ -1153,14 +1151,13 @@ async def check_drift():
 async def forecast_risk(request: Request):
     """
     AI-powered risk forecasting based on current security posture.
-    Uses Claude to analyze trends and predict potential issues.
+    Uses OpenAI to analyze trends and predict potential issues.
     """
     import os
-    from anthropic import Anthropic
     
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
-        return {"error": "ANTHROPIC_API_KEY not configured"}
+        return {"error": "OPENAI_API_KEY not configured"}
     
     try:
         # Gather current security metrics
@@ -1183,7 +1180,7 @@ async def forecast_risk(request: Request):
         except:
             pass
         
-        client = Anthropic(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         
         prompt = f"""As a security analyst, forecast potential risks for the next 24-48 hours based on current metrics:
 
@@ -1203,13 +1200,13 @@ Provide:
 
 Be concise and actionable."""
 
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=800,
-            messages=[{"role": "user", "content": prompt}]
+        response = client.responses.create(
+            model="gpt-5.6-terra",
+            max_output_tokens=800,
+            input=prompt,
         )
         
-        forecast_text = response.content[0].text
+        forecast_text = response.output_text
         
         return {
             "forecast": forecast_text,
@@ -1923,16 +1920,15 @@ async def agent_chat(request: Request):
     Supports optional incident_id context for per-incident Q&A.
     """
     import os
-    from anthropic import Anthropic
 
     body = await request.json()
     messages = body.get("messages", [])
     incident_id = body.get("incident_id")
 
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("OPENAI_API_KEY", "")
     if not api_key:
         return {
-            "response": "Argus AI is not configured. Set the ANTHROPIC_API_KEY environment variable on the agent.",
+            "response": "Argus AI is not configured. Set the OPENAI_API_KEY environment variable on the agent.",
             "error": "missing_api_key",
         }
 
@@ -1977,23 +1973,23 @@ async def agent_chat(request: Request):
     )
 
     try:
-        client = Anthropic(api_key=api_key)
-        response = client.messages.create(
-            model="claude-sonnet-4-6",
-            max_tokens=1200,
-            system=system,
-            messages=messages,
+        client = OpenAI(api_key=api_key)
+        response = client.responses.create(
+            model="gpt-5.6-terra",
+            max_output_tokens=1200,
+            instructions=system,
+            input=messages,
         )
         return {
-            "response": response.content[0].text,
+            "response": response.output_text,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
     except Exception as e:
         log.error("chat_failed", error=str(e))
-        if "invalid x-api-key" in str(e).lower() or "authentication_error" in str(e).lower():
+        if "api key" in str(e).lower() or "authentication" in str(e).lower():
             return {
-                "response": "Argus AI could not authenticate with Anthropic. Rotate or replace ANTHROPIC_API_KEY in the running agent environment, then restart the agent.",
-                "error": "anthropic_authentication_failed",
+                "response": "Argus AI could not authenticate with OpenAI. Rotate or replace OPENAI_API_KEY in the running agent environment, then restart the agent.",
+                "error": "openai_authentication_failed",
             }
         return {"response": f"Error communicating with Argus AI: {str(e)}", "error": str(e)}
 
@@ -2018,7 +2014,7 @@ async def process_alert(payload: dict) -> None:
     rule = payload.get("rule", "unknown")
     log.info("pipeline_started", rule=rule)
 
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("OPENAI_API_KEY", "")
     notify_webhook = os.getenv("SLACK_WEBHOOK_URL", "")
 
     context = await enrich_context(payload)

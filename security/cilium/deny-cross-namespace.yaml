@@ -20,9 +20,9 @@ spec:
         - matchLabels:
             "k8s:io.kubernetes.pod.namespace": monitoring
     - toFQDNs:
-        - matchPattern: "*.anthropic.com"
+        - matchPattern: "*.openai.com"
     - toFQDNs:
-        - matchPattern: "api.anthropic.com"
+        - matchPattern: "api.openai.com"
 ---
 apiVersion: "cilium.io/v2"
 kind: CiliumNetworkPolicy

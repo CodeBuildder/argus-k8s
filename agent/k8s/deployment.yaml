@@ -29,11 +29,11 @@ spec:
             - containerPort: 8080
               name: http
           env:
-            - name: ANTHROPIC_API_KEY
+            - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: argus-secrets
-                  key: anthropic-api-key
+                  key: openai-api-key
             - name: IN_CLUSTER
               value: "true"
             - name: LOKI_URL

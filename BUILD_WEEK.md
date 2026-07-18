@@ -31,6 +31,7 @@ Work started during the submission period includes:
 - A seeded randomized incident generator for exploratory demos and deterministic replays
 - Input validation, distribution summaries, and automated tests for generated incidents
 - Repository and UI build-quality fixes discovered during Codex-assisted verification
+- Migration of every active Argus AI workflow to the OpenAI Responses API
 
 ## Phase record
 
@@ -39,6 +40,18 @@ Work started during the submission period includes:
 | Phase 1 | Reproducible randomized incident generation and repository stabilization | Issue #90 / PR #91 |
 | Phase 2 | Argus findings and entity posture synchronization with the Sentinel World Model | Issue #92 |
 | Phase 3 | Cluster-free setup, launch, simulation, and troubleshooting path | Issue #94 |
+| Phase 4 | Guarded real-cluster demo automation and evidence collection | Issue #98 / PR #100 |
+| Phase 5 | Real-cluster agent and console lifecycle integration | Issue #101 / PR #102 |
+| Phase 6 | OpenAI-native reasoning, configuration, deployment, UI status, and documentation | Issue #103 / PR #104 |
+
+### Phase 6 — OpenAI-native reasoning
+
+Every active AI workflow now uses the OpenAI Responses API: incident assessment,
+operator summaries, natural-language threat hunting, risk forecasting, and chat.
+High-stakes alerts route to GPT-5.6, while frequent operator workflows use efficient
+GPT-5.6 variants. Model failures and malformed responses continue to fail closed to
+human review. Kubernetes deployment, network egress, health status, tests, and setup
+instructions use `OPENAI_API_KEY` consistently.
 
 ### Phase 2 — World Model integration
 

@@ -11,7 +11,7 @@ This project represents original work including:
 - Attack chain correlation engine
 - Human-in-the-loop approval system with cryptographic audit trail
 - Cyber-themed real-time threat console UI design
-- Integration of Falco, Cilium, Kyverno, Prometheus, Loki, and Claude API
+- Integration of Falco, Cilium, Kyverno, Prometheus, Loki, and the OpenAI API
 
 All architectural decisions are documented in docs/decisions/.
 Commit history on GitHub serves as timestamped proof of authorship.

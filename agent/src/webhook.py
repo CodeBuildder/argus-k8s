@@ -191,7 +191,7 @@ async def process_alert(payload: dict) -> None:
     _l = _log.get_logger()
     rule = payload.get("rule", "unknown")
     _l.info("pipeline_started", rule=rule)
-    api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    api_key = os.getenv("OPENAI_API_KEY", "")
     notify_webhook = os.getenv("SLACK_WEBHOOK_URL", "")
     context = await enrich_context(payload)
     decision = await reason_about_threat(context, api_key)

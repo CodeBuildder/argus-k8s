@@ -20,8 +20,8 @@ interface QueryHistoryEntry {
 }
 
 interface HealthStatus {
-  anthropic_configured?: boolean
-  anthropic_key_hint?: string | null
+  openai_configured?: boolean
+  openai_key_hint?: string | null
 }
 
 export default function ThreatHunting() {
@@ -140,13 +140,13 @@ export default function ThreatHunting() {
   const insightCards = [
     {
       key: 'backend',
-      accent: authBroken ? '#ff2d55' : health?.anthropic_configured ? '#00ff9f' : '#ff9f0a',
+      accent: authBroken ? '#ff2d55' : health?.openai_configured ? '#00ff9f' : '#ff9f0a',
       kicker: 'Backend state',
       text: authBroken
-        ? 'Anthropic auth is failing on the backend, so query translation is blocked.'
-        : health?.anthropic_configured
-          ? `Agent is configured${health?.anthropic_key_hint ? ` (${health.anthropic_key_hint})` : ''}.`
-          : 'Agent health is up, but Anthropic is not configured.',
+        ? 'OpenAI authentication is failing on the backend, so query translation is blocked.'
+        : health?.openai_configured
+          ? `OpenAI is configured${health?.openai_key_hint ? ` (${health.openai_key_hint})` : ''}.`
+          : 'Agent health is up, but OpenAI is not configured.',
     },
     {
       key: 'pattern',
@@ -434,4 +434,3 @@ export default function ThreatHunting() {
     </div>
   )
 }
-
