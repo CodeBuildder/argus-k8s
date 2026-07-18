@@ -29,10 +29,15 @@ stop_cleanly() {
 trap stop_cleanly INT TERM
 trap cleanup EXIT
 
-if [[ ! -x "${repo_root}/.venv/bin/python" || ! -d "${repo_root}/ui/node_modules" ]]; then
-  echo "Local dependencies are not installed."
-  echo "Run: make setup-local"
-  exit 1
+if [[ ! -x "${repo_root}/.venv/bin/python" ]]; then
+  echo "Python environment missing; creating it now ..."
+  python3 -m venv "${repo_root}/.venv"
+  "${repo_root}/.venv/bin/pip" install -r "${repo_root}/agent/requirements.txt"
+fi
+
+if [[ ! -d "${repo_root}/ui/node_modules" ]]; then
+  echo "UI dependencies missing; installing them now ..."
+  npm --prefix "${repo_root}/ui" ci
 fi
 
 if curl --fail --silent http://127.0.0.1:8000/health >/dev/null 2>&1; then

@@ -1062,43 +1062,6 @@ export default function CommandCenter() {
     return () => clearInterval(t)
   }, [])
 
-  // Seed backend incidents on first load if the backend is empty.
-  useEffect(() => {
-    const autoSimulate = async () => {
-      // Wait a bit for initial data fetch
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // If we have less than 10 incidents or they're all the same type, simulate diverse threats
-      if (incidents.length < 10) {
-        const uniqueRules = new Set(incidents.map(i => i.rule))
-        if (uniqueRules.size < 3) {
-          console.log('Seeding backend threat stream for live dashboard data')
-          await simulateThreats('mixed', 20)
-        }
-      }
-    }
-
-    autoSimulate()
-  }, []) // Run once on mount
-
-  // Periodically add new diverse threats (every 45 seconds)
-  useEffect(() => {
-    const periodicSimulate = setInterval(async () => {
-      // Add 3-5 new threats periodically to keep things interesting
-      try {
-        await fetch(`${API}/simulate-threats`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ count: 3, scenario: 'mixed' })
-        })
-      } catch (error) {
-        console.error('Periodic simulation failed:', error)
-      }
-    }, 45000) // Every 45 seconds
-
-    return () => clearInterval(periodicSimulate)
-  }, [])
-
   const kpis = stats
     ? [
         { label: 'Active (1h)',      value: stats.total_1h,             color: '#ff9f0a', spark: sparkData.events },

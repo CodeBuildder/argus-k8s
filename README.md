@@ -48,14 +48,13 @@ curl. It does **not** require OrbStack, Kubernetes, Falco, Cilium, an API key, o
 infrastructure.
 
 ```bash
-make setup-local
 make demo-local
 ```
 
 Then open **http://127.0.0.1:5173**.
 
-`make demo-local` starts the backend and UI, waits for the backend health check, and
-generates ten randomized incidents. Press `Ctrl-C` to stop both services. For every
+`make demo-local` installs missing dependencies, starts the backend and UI, waits for
+the backend health check, and generates ten randomized incidents. Press `Ctrl-C` to stop both services. For every
 command, expected result, testing mode, and troubleshooting path, follow the
 **[Getting Started guide](docs/GETTING_STARTED.md)**.
 
