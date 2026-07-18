@@ -35,9 +35,9 @@ _load_local_env()
 
 
 class Config:
-    # Anthropic API
-    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    AI_MODEL: str = os.getenv("AI_MODEL", "cl" + "aude-opus-4-5")
+    # OpenAI API
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    AI_MODEL: str = os.getenv("AI_MODEL", "gpt-5.6")
 
     # Deduplication
     DEDUP_WINDOW_SECONDS: int = int(os.getenv("DEDUP_WINDOW_SECONDS", "300"))
@@ -64,8 +64,8 @@ class Config:
 
     @classmethod
     def validate(cls) -> None:
-        if not cls.ANTHROPIC_API_KEY:
-            raise ValueError("ANTHROPIC_API_KEY environment variable is required")
+        if not cls.OPENAI_API_KEY:
+            raise ValueError("OPENAI_API_KEY environment variable is required")
 
 
 config = Config()

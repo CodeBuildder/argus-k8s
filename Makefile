@@ -91,7 +91,7 @@ deploy-observability:
 
 deploy-agent:
 	@echo "==> Deploying Argus agent..."
-	@cd agent && ANTHROPIC_API_KEY='${ANTHROPIC_API_KEY}' bash deploy.sh
+	@cd agent && OPENAI_API_KEY='${OPENAI_API_KEY}' bash deploy.sh
 
 deploy-ui:
 	@echo "TODO: implement in Module 5"

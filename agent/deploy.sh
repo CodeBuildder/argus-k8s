@@ -2,7 +2,7 @@
 # Argus Agent — build and deploy to cluster
 # Issue #17: https://github.com/CodeBuildder/argus-k8s/issues/17
 #
-# Usage: ANTHROPIC_API_KEY=sk-ant-... ./deploy.sh
+# Usage: OPENAI_API_KEY=sk-... ./deploy.sh
 
 set -euo pipefail
 
@@ -30,13 +30,13 @@ echo "==> Applying RBAC..."
 kubectl apply -f k8s/rbac.yaml
 
 echo "==> Creating secret..."
-if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  echo "ERROR: ANTHROPIC_API_KEY env var is required"
+if [ -z "${OPENAI_API_KEY:-}" ]; then
+  echo "ERROR: OPENAI_API_KEY env var is required"
   exit 1
 fi
 kubectl create secret generic argus-secrets \
   --namespace "${NAMESPACE}" \
-  --from-literal=anthropic-api-key="${ANTHROPIC_API_KEY}" \
+  --from-literal=openai-api-key="${OPENAI_API_KEY}" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 echo "==> Deploying agent..."

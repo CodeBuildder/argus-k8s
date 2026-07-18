@@ -2,7 +2,7 @@
 Tests for the AI reasoning layer.
 Copyright (c) 2026 Kaushikkumaran
 
-Uses mocked Anthropic API responses — no real API calls in tests.
+Uses mocked OpenAI Responses API responses — no real API calls in tests.
 """
 
 import json
@@ -20,8 +20,8 @@ from reasoning import (
     _default_decision,
     _build_user_prompt,
     _select_model,
-    SONNET_MODEL,
-    OPUS_MODEL,
+    FAST_MODEL,
+    REASONING_MODEL,
 )
 
 SAMPLE_CONTEXT = {
@@ -84,14 +84,10 @@ def make_mock_response(content_text: str):
     mock_usage = MagicMock()
     mock_usage.input_tokens = 500
     mock_usage.output_tokens = 150
-    mock_usage.cache_read_input_tokens = 400
-    mock_usage.cache_creation_input_tokens = 100
-
-    mock_content = MagicMock()
-    mock_content.text = content_text
+    mock_usage.input_tokens_details = MagicMock(cached_tokens=400)
 
     mock_response = MagicMock()
-    mock_response.content = [mock_content]
+    mock_response.output_text = content_text
     mock_response.usage = mock_usage
     return mock_response
 
@@ -100,10 +96,10 @@ class TestReasonAboutThreat:
     async def test_valid_response_returns_decision(self):
         mock_response = make_mock_response(VALID_MODEL_RESPONSE)
 
-        with patch("anthropic.AsyncAnthropic") as mock_anthropic:
+        with patch("openai.AsyncOpenAI") as mock_openai:
             mock_client = AsyncMock()
-            mock_anthropic.return_value = mock_client
-            mock_client.messages.create = AsyncMock(return_value=mock_response)
+            mock_openai.return_value = mock_client
+            mock_client.responses.create = AsyncMock(return_value=mock_response)
 
             decision = await reason_about_threat(SAMPLE_CONTEXT, "test-key")
 
@@ -116,10 +112,10 @@ class TestReasonAboutThreat:
     async def test_invalid_json_returns_default_decision(self):
         mock_response = make_mock_response("this is not json at all")
 
-        with patch("anthropic.AsyncAnthropic") as mock_anthropic:
+        with patch("openai.AsyncOpenAI") as mock_openai:
             mock_client = AsyncMock()
-            mock_anthropic.return_value = mock_client
-            mock_client.messages.create = AsyncMock(return_value=mock_response)
+            mock_openai.return_value = mock_client
+            mock_client.responses.create = AsyncMock(return_value=mock_response)
 
             decision = await reason_about_threat(SAMPLE_CONTEXT, "test-key")
 
@@ -130,22 +126,20 @@ class TestReasonAboutThreat:
         fenced = "```json\n" + VALID_MODEL_RESPONSE + "\n```"
         mock_response = make_mock_response(fenced)
 
-        with patch("anthropic.AsyncAnthropic") as mock_anthropic:
+        with patch("openai.AsyncOpenAI") as mock_openai:
             mock_client = AsyncMock()
-            mock_anthropic.return_value = mock_client
-            mock_client.messages.create = AsyncMock(return_value=mock_response)
+            mock_openai.return_value = mock_client
+            mock_client.responses.create = AsyncMock(return_value=mock_response)
 
             decision = await reason_about_threat(SAMPLE_CONTEXT, "test-key")
 
         assert decision.severity == SeverityLevel.HIGH
 
     async def test_api_error_returns_default_decision(self):
-        import anthropic as anthropic_module
-
-        with patch("anthropic.AsyncAnthropic") as mock_anthropic:
+        with patch("openai.AsyncOpenAI") as mock_openai:
             mock_client = AsyncMock()
-            mock_anthropic.return_value = mock_client
-            mock_client.messages.create = AsyncMock(
+            mock_openai.return_value = mock_client
+            mock_client.responses.create = AsyncMock(
                 side_effect=Exception("API unavailable")
             )
 
@@ -158,10 +152,10 @@ class TestReasonAboutThreat:
         response_data["confidence"] = 1.5
         mock_response = make_mock_response(json.dumps(response_data))
 
-        with patch("anthropic.AsyncAnthropic") as mock_anthropic:
+        with patch("openai.AsyncOpenAI") as mock_openai:
             mock_client = AsyncMock()
-            mock_anthropic.return_value = mock_client
-            mock_client.messages.create = AsyncMock(return_value=mock_response)
+            mock_openai.return_value = mock_client
+            mock_client.responses.create = AsyncMock(return_value=mock_response)
 
             decision = await reason_about_threat(SAMPLE_CONTEXT, "test-key")
 
@@ -169,25 +163,25 @@ class TestReasonAboutThreat:
 
 
 class TestModelSelection:
-    def test_critical_uses_opus(self):
+    def test_critical_uses_reasoning_model(self):
         alert = {"priority": "Critical"}
-        assert _select_model(alert) == OPUS_MODEL
+        assert _select_model(alert) == REASONING_MODEL
 
-    def test_error_uses_opus(self):
+    def test_error_uses_reasoning_model(self):
         alert = {"priority": "Error"}
-        assert _select_model(alert) == OPUS_MODEL
+        assert _select_model(alert) == REASONING_MODEL
 
-    def test_warning_uses_sonnet(self):
+    def test_warning_uses_fast_model(self):
         alert = {"priority": "Warning"}
-        assert _select_model(alert) == SONNET_MODEL
+        assert _select_model(alert) == FAST_MODEL
 
-    def test_notice_uses_sonnet(self):
+    def test_notice_uses_fast_model(self):
         alert = {"priority": "Notice"}
-        assert _select_model(alert) == SONNET_MODEL
+        assert _select_model(alert) == FAST_MODEL
 
-    def test_unknown_uses_sonnet(self):
+    def test_unknown_uses_fast_model(self):
         alert = {"priority": "unknown"}
-        assert _select_model(alert) == SONNET_MODEL
+        assert _select_model(alert) == FAST_MODEL
 
 
 class TestDefaultDecision:
