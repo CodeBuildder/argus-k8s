@@ -139,7 +139,26 @@ checkouts plus the deployed `sentinel-platform` and `phoenix-system` services in
 selected Kubernetes context. Validate everything without starting processes, opening
 port-forwards, or publishing evidence:
 
+```text
+Projects/
+├── argus-k8s/                 # run the command here
+└── sentinel-stack/
+    ├── phoenix/
+    └── sentinel/
+```
+
+Install each repository's local dependencies once:
+
 ```bash
+make setup-local
+make -C ../sentinel-stack/sentinel setup-local
+npm --prefix ../sentinel-stack/phoenix/dashboard install
+```
+
+Select the real three-node k3s context, then run the non-mutating preflight:
+
+```bash
+kubectl config use-context argus
 make demo-platform-dry-run
 ```
 
