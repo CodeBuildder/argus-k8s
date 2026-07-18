@@ -192,6 +192,10 @@ started. The default sibling paths are `../sentinel-stack/phoenix` and
 `../sentinel-stack/sentinel`; override them with `PHOENIX_ROOT` and `SENTINEL_ROOT` when
 your checkouts live elsewhere. This deterministic path does not inject live Chaos Mesh
 faults; the existing live k3s path remains available for real runtime security evidence.
+Sentinel readiness is checked through the dashboard's `/api/health` proxy, not merely
+its HTML homepage. If port `5175` contains a stale Vite process from the configured
+Sentinel checkout, the command safely restarts it; listeners from any other directory
+are never terminated automatically.
 
 ## Part of the Sentinel multi-agent platform
 

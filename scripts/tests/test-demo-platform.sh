@@ -18,6 +18,9 @@ grep -q 'provenance.*simulator' "${script}"
 grep -q 'Press Ctrl-C to stop only processes started by this command' "${script}"
 grep -q 'PLATFORM RESILIENCE PROOF: PASS' "${script}"
 grep -q 'availability percentage not measured' "${script}"
+grep -q 'sentinel_ui_ok' "${script}"
+grep -q 'listener_cwd.*expected_cwd' "${script}"
+grep -q '5175/api/health' "${script}"
 
 jq -n '{
   schema_version: "1.0", verdict: "PASS", run_id: "test", generated_at: "2026-07-18T00:00:00Z",

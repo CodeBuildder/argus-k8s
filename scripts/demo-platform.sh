@@ -32,6 +32,30 @@ require_command() { command -v "$1" >/dev/null 2>&1 || fail "Missing command: $1
 http_ok() { curl --fail --silent --max-time 2 "$1" >/dev/null 2>&1; }
 port_in_use() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
 now_ms() { python3 -c 'import time; print(time.time_ns() // 1_000_000)'; }
+sentinel_ui_ok() {
+  curl --fail --silent --max-time 3 http://127.0.0.1:5175/api/health |
+    jq -e '.service == "sentinel-orchestrator" and (.world_model_connected | type == "boolean")' >/dev/null 2>&1
+}
+
+reclaim_stale_sentinel_ui() {
+  local listener_pid listener_cwd expected_cwd="${sentinel_root}/dashboard"
+  sentinel_ui_ok && return 0
+  port_in_use 5175 || return 0
+
+  listener_pid="$(lsof -nP -tiTCP:5175 -sTCP:LISTEN | head -1)"
+  [[ -n "${listener_pid}" ]] || fail "Port 5175 is occupied but its listener cannot be identified."
+  listener_cwd="$(lsof -a -p "${listener_pid}" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+  [[ "${listener_cwd}" == "${expected_cwd}" ]] ||
+    fail "Port 5175 is occupied by PID ${listener_pid} outside ${expected_cwd}; stop it manually."
+
+  echo "  restart: stale Sentinel UI on 127.0.0.1:5175 (API proxy is not serving JSON)"
+  kill "${listener_pid}"
+  for _attempt in $(seq 1 20); do
+    port_in_use 5175 || return 0
+    sleep 0.25
+  done
+  fail "Stale Sentinel UI PID ${listener_pid} did not release port 5175."
+}
 
 wait_for_url() {
   local label="$1" url="$2" pid="${3:-}" attempt
@@ -130,9 +154,11 @@ start_service "phoenix-ui" 5174 http://127.0.0.1:5174 "${phoenix_root}" \
 start_service "sentinel-api" 8090 http://127.0.0.1:8090/health "${sentinel_root}" \
   env WORLD_MODEL_URL=http://127.0.0.1:8010 OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
   "${sentinel_root}/.venv/bin/python" -m uvicorn main:app --app-dir backend/src --host 127.0.0.1 --port 8090
-start_service "sentinel-ui" 5175 http://127.0.0.1:5175 "${sentinel_root}" \
+reclaim_stale_sentinel_ui
+start_service "sentinel-ui" 5175 http://127.0.0.1:5175/api/health "${sentinel_root}" \
   env VITE_ARGUS_URL=http://127.0.0.1:5173 VITE_PHOENIX_URL=http://127.0.0.1:5174 \
   npm --prefix dashboard run dev -- --host 127.0.0.1 --port 5175
+sentinel_ui_ok || fail "Sentinel UI proxy did not return orchestrator JSON from /api/health."
 
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 correlation_id="judge-demo-${run_id}"
