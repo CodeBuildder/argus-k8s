@@ -194,6 +194,9 @@ Every synthetic entity has `demo-data=synthetic`; evidence is explicitly labeled
 or measured production availability. On `Ctrl-C`, it stops its local processes and
 removes its disposable Redis container. It replaces only known project listeners and
 kubectl port-forwards on reserved demo ports; unrelated listeners cause a safe failure.
+The Sentinel incident drawer uses the same seven-stage resilience timeline as the live
+proof, while labeling every portable stage as replayed or simulated and leaving
+availability explicitly unmeasured.
 
 ### Path D — live k3s-backed platform proof
 

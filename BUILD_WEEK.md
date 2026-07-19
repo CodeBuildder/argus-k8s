@@ -48,7 +48,20 @@ Work started during the submission period includes:
 | Phase 9 | Cluster-free full-platform judge demo and explicit live-k3s command | Issue #114 |
 | Phase 10 | Guarded live k3s detection, chaos, recovery, correlation, and measured evidence | Issue #116 |
 | Phase 11 | Judge onboarding doctor, single-path setup, and rehearsal diagnostics | Issue #118 |
+| Phase 12 | Canonical resilience lifecycle and unambiguous evidence provenance | Argus #120 / Sentinel #63 |
 | Final video | Two-minute judge story with frame-by-frame screen, action, narration, timing, and fallback plan | Pending |
+
+### Phase 12 — truthful resilience proof timeline
+
+Every correlated judge incident can now carry the same seven-stage lifecycle: Healthy,
+Fault injected, Detection, Decision, Human approval, Recovery, and Verification. The
+live producer supplies actual timestamps, measured detection/recovery durations, HTTP
+availability, experiment ID, and evidence source. Human approval occurs only after
+observed Argus evidence exists. The portable producer supplies a visually equivalent
+timeline, but every stage is explicitly simulator/replay provenance and availability is
+reported as not measured. Sentinel renders four mutually exclusive labels—Live
+Observed, Synthetic Simulator, Live Chaos Mesh, and Replayed Evidence—and never infers
+missing proof stages.
 
 ### Phase 11 — judge onboarding and rehearsal doctor
 
