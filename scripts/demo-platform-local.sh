@@ -187,11 +187,14 @@ start_service phoenix-ui 5174 http://127.0.0.1:5174/api/graph/health "${phoenix_
   env VITE_ARGUS_URL=http://127.0.0.1:5173 VITE_SENTINEL_URL=http://127.0.0.1:5175 \
   npm --prefix dashboard run dev -- --host 127.0.0.1 --port 5174
 start_service sentinel-api 8090 http://127.0.0.1:8090/health "${sentinel_root}" \
-  env WORLD_MODEL_URL=http://127.0.0.1:8010 OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
+  env WORLD_MODEL_URL=http://127.0.0.1:8010 OPENAI_API_KEY="${OPENAI_API_KEY:-}" SENTINEL_DEMO_MODE=portable \
   "${sentinel_root}/.venv/bin/python" -m uvicorn main:app --app-dir backend/src --host 127.0.0.1 --port 8090
 start_service sentinel-ui 5175 http://127.0.0.1:5175/api/health "${sentinel_root}" \
   env VITE_ARGUS_URL=http://127.0.0.1:5173 VITE_PHOENIX_URL=http://127.0.0.1:5174 \
   npm --prefix dashboard run dev -- --host 127.0.0.1 --port 5175
+curl --fail --silent --max-time 20 http://127.0.0.1:5175/api/readiness |
+  jq -e '.ready_to_present == true and .mode == "portable"' >/dev/null ||
+  fail "Sentinel presentation preflight is not ready. Open http://127.0.0.1:5175 for component remediation."
 
 echo "==> Seeding the synthetic cluster and cross-agent lifecycles"
 demo_started_ms="$(now_ms)"

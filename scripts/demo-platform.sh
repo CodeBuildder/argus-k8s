@@ -154,12 +154,16 @@ start_service "phoenix-ui" 5174 http://127.0.0.1:5174 "${phoenix_root}" \
   npm --prefix dashboard run dev -- --host 127.0.0.1 --port 5174
 start_service "sentinel-api" 8090 http://127.0.0.1:8090/health "${sentinel_root}" \
   env WORLD_MODEL_URL=http://127.0.0.1:8010 OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
+  SENTINEL_DEMO_MODE=live KUBECTL_CONTEXT="${demo_context}" \
   "${sentinel_root}/.venv/bin/python" -m uvicorn main:app --app-dir backend/src --host 127.0.0.1 --port 8090
 reclaim_stale_sentinel_ui
 start_service "sentinel-ui" 5175 http://127.0.0.1:5175/api/health "${sentinel_root}" \
   env VITE_ARGUS_URL=http://127.0.0.1:5173 VITE_PHOENIX_URL=http://127.0.0.1:5174 \
   npm --prefix dashboard run dev -- --host 127.0.0.1 --port 5175
 sentinel_ui_ok || fail "Sentinel UI proxy did not return orchestrator JSON from /api/health."
+curl --fail --silent --max-time 20 http://127.0.0.1:5175/api/readiness |
+  jq -e '.ready_to_present == true and .mode == "live"' >/dev/null ||
+  fail "Sentinel live presentation preflight is not ready. Open http://127.0.0.1:5175 for component remediation."
 
 if [[ "${skip_seed}" == "true" ]]; then
   echo "Live platform services are ready; waiting for the guarded experiment driver."
