@@ -24,24 +24,210 @@ Open and arrange these tabs in this order:
 Recording settings: 1920×1080, browser zoom 90–100%, notifications off, cursor visible,
 and no terminal containing `.env` or credentials. Wait for **SOG LIVE** before recording.
 
-## The 1:55 judge cut
+## How to record this
 
-Read the narration naturally. Do not add improvised architecture detail.
+Record the screen first, then add the narration as a voice-over. This removes the pressure
+of clicking and speaking perfectly at the same time.
 
-| Time | Show | Action | Narration |
-|---:|---|---|---|
-| 0:00–0:08 | Sentinel hero | Hold on the headline and live risk card. | “Production systems fail in two ways: attacks compromise them, and infrastructure breaks beneath them. Today those signals live in separate tools.” |
-| 0:08–0:20 | **How it works** overlay | Select **How it works**. Let the five stages remain visible. | “Sentinel closes that gap. Argus turns runtime security telemetry into evidence. The Sentinel Operations Graph connects it to affected services. Sentinel uses OpenAI to explain and prioritize the decision.” |
-| 0:20–0:29 | Same overlay | Point to **Human governance**, then **Phoenix**. | “Safe, proven recovery can run autonomously. High-impact action waits for a human. Phoenix then restores the service and verifies the result.” |
-| 0:29–0:42 | Argus | Open the highest-severity threat detail. Pause on source, severity, resource, and recommended action. | “Here Argus has detected suspicious workload behavior, preserved the original evidence, mapped the blast radius, and produced an evidence-grounded response—not just another alert.” |
-| 0:42–0:55 | Phoenix | Open the matching resilience scenario or completed run. Pause on its provenance and result. | “Phoenix exercises the affected service, classifies the failure, executes a bounded recovery, and records whether health was actually restored.” |
-| 0:55–1:10 | Sentinel command center | Return to Sentinel. Point to Argus, Phoenix, entity count, and relationship count. | “Sentinel combines both specialist agents inside the SOG. This is live application state: connected entities, relationships, evidence, and correlated incidents refresh continuously.” |
-| 1:10–1:28 | Sentinel incident drawer | Open the correlated incident. Scroll through Healthy → Fault injected → Detection → Decision → Approval → Recovery → Verification. | “One incident now explains the full resilience lifecycle. Every stage carries its timestamp, evidence source, and outcome, so an operator can audit exactly why the system acted.” |
-| 1:28–1:40 | Provenance labels and risk explanation | Point to the provenance badge, then open score evidence. | “The product never disguises demo data. Replay, simulator, live observation, and live Chaos Mesh are visibly distinct. Fleet risk is explainable down to its supporting records.” |
-| 1:40–1:50 | Live scorecard, or portable scorecard when unavailable | Show provenance, recovery, availability, and timings. | “The repeatable demo verifies cross-agent correlation. Our guarded k3s proof separately measures real Chaos Mesh recovery and HTTP availability.” |
-| 1:50–1:55 | Sentinel hero | Return to the headline. No cursor movement. | “Sentinel is autonomous resilience through AI—with humans governing high-risk actions.” |
+For every shot below:
 
-The narration is intentionally below two minutes, leaving room for clicks and visual pauses.
+1. Move to the requested screen.
+2. Complete the instruction under **DO BEFORE SPEAKING**.
+3. Wait until the page is still and readable.
+4. Read only the text under **SAY**.
+5. Complete **DO WHILE SPEAKING** slowly, if present.
+6. Stop speaking at **END ON** and leave the screen still for half a second.
+
+Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
+
+## The 1:55 recording script
+
+### Shot 1 — The problem · `0:00–0:08`
+
+**SHOW:** Sentinel home page, with the headline and Live Risk card visible.
+
+**DO BEFORE SPEAKING:** Place the cursor in empty space. Do not click anything.
+
+**SAY:**
+
+> Production systems fail in two ways: attacks compromise them, and infrastructure
+> breaks beneath them. Today those signals live in separate tools.
+
+**END ON:** The unchanged Sentinel home page.
+
+---
+
+### Shot 2 — Connect the platform · `0:08–0:20`
+
+**SHOW:** The Sentinel **How it works** overlay.
+
+**DO BEFORE SPEAKING:** Click **How it works** and wait until the overlay is fully open.
+
+**DO WHILE SPEAKING:** Move the cursor slowly from **Argus** to **SOG**, then to
+**Sentinel + OpenAI** as you name them.
+
+**SAY:**
+
+> Sentinel closes that gap. Argus turns runtime security telemetry into evidence. The
+> Sentinel Operations Graph connects it to affected services. Sentinel uses OpenAI to
+> explain and prioritize the decision.
+
+**END ON:** The cursor resting over **Sentinel + OpenAI**.
+
+---
+
+### Shot 3 — Explain control · `0:20–0:29`
+
+**SHOW:** Keep the same **How it works** overlay open.
+
+**DO BEFORE SPEAKING:** Move the cursor to **Human governance**.
+
+**DO WHILE SPEAKING:** Point to **Human governance** for the first two sentences, then
+move to **Phoenix** for the final sentence.
+
+**SAY:**
+
+> Safe, proven recovery can run autonomously. High-impact action waits for a human.
+> Phoenix then restores the service and verifies the result.
+
+**END ON:** The cursor resting over **Phoenix**.
+
+---
+
+### Shot 4 — Show Argus evidence · `0:29–0:42`
+
+**SHOW:** Argus threat detail for the highest-severity seeded threat.
+
+**DO BEFORE SPEAKING:** Switch to the prepared Argus tab and open the threat detail.
+Make sure source, severity, affected resource, and recommended response are visible.
+
+**DO WHILE SPEAKING:** Point once to the original evidence, then once to the recommended
+response. Do not scroll rapidly.
+
+**SAY:**
+
+> Here Argus detected suspicious workload behavior, preserved the original evidence,
+> mapped the blast radius, and produced an evidence-grounded response—not just another
+> alert.
+
+**END ON:** The recommended response and evidence visible together.
+
+---
+
+### Shot 5 — Show Phoenix verification · `0:42–0:55`
+
+**SHOW:** Phoenix completed resilience scenario or agent run matching the demo resource.
+
+**DO BEFORE SPEAKING:** Switch to the prepared Phoenix tab. Open a completed run and
+make its provenance, recovery action, and verified result visible.
+
+**DO WHILE SPEAKING:** Point to the recovery result only when saying “verified.”
+
+**SAY:**
+
+> Phoenix exercises the affected service, classifies the failure, executes a bounded
+> recovery, and records whether health was actually restored.
+
+**END ON:** The completed and verified recovery result.
+
+---
+
+### Shot 6 — Show the shared SOG · `0:55–1:10`
+
+**SHOW:** Sentinel home page with both specialist-agent cards and the central SOG card.
+
+**DO BEFORE SPEAKING:** Return to Sentinel and wait for **SOG LIVE**. Ensure Argus,
+Phoenix, entities, relationships, evidence, and incidents are visible.
+
+**DO WHILE SPEAKING:** Point from Argus to the SOG, then from the SOG to Phoenix. Finish
+by pointing to the entity and relationship counts.
+
+**SAY:**
+
+> Sentinel combines both specialist agents inside the SOG. This is live application
+> state: connected entities, relationships, evidence, and correlated incidents refresh
+> continuously.
+
+**END ON:** The complete three-card Argus → SOG → Phoenix view.
+
+---
+
+### Shot 7 — Prove the lifecycle · `1:10–1:28`
+
+**SHOW:** The Sentinel incident drawer containing the seven-stage resilience timeline.
+
+**DO BEFORE SPEAKING:** Open the prepared correlated incident. Position the drawer at
+the start of the timeline.
+
+**DO WHILE SPEAKING:** Scroll slowly through **Healthy → Fault injected → Detection →
+Decision → Human approval → Recovery → Verification**. The final stage must be visible
+when you say “why the system acted.”
+
+**SAY:**
+
+> One incident explains the full resilience lifecycle. Every stage carries its
+> timestamp, evidence source, and outcome, so an operator can audit exactly why the
+> system acted.
+
+**END ON:** **Verification** visible, with its result and evidence source.
+
+---
+
+### Shot 8 — Prove honesty and explainability · `1:28–1:40`
+
+**SHOW:** The incident provenance label, followed by the Live Risk explanation popup.
+
+**DO BEFORE SPEAKING:** Keep the provenance badge visible.
+
+**DO WHILE SPEAKING:** Point to the provenance badge during the first sentence. Then
+close the incident, click **Live Risk**, and reveal its supporting score evidence.
+
+**SAY:**
+
+> The product never disguises demo data. Replay, simulator, live observation, and live
+> Chaos Mesh are visibly distinct. Fleet risk is explainable down to its supporting
+> records.
+
+**END ON:** The Live Risk score breakdown and supporting records.
+
+---
+
+### Shot 9 — Show the proof artifact · `1:40–1:50`
+
+**SHOW:** Prefer `artifacts/demo-platform/latest-live-demo.md`. If no live artifact is
+available, show `artifacts/demo-platform/latest-demo.md` and keep its simulator/replay
+label visible.
+
+**DO BEFORE SPEAKING:** Open the prepared scorecard and frame the provenance, recovery,
+availability, and timing rows.
+
+**DO WHILE SPEAKING:** Point to cross-agent correlation first, then the live-only
+availability measurement.
+
+**SAY:**
+
+> The repeatable demo verifies cross-agent correlation. Our guarded k3s proof separately
+> measures real Chaos Mesh recovery and HTTP availability.
+
+**END ON:** The evidence scorecard with provenance visible.
+
+---
+
+### Shot 10 — Close · `1:50–1:55`
+
+**SHOW:** Sentinel home page and its main headline.
+
+**DO BEFORE SPEAKING:** Return to Sentinel. Close every popup and place the cursor in
+empty space.
+
+**SAY:**
+
+> Sentinel is autonomous resilience through AI—with humans governing high-risk actions.
+
+**END ON:** Hold the Sentinel headline silently for one full second, then fade to black.
+
+The voice-over contains 215 words. At a calm pace, it leaves enough time for the screen
+actions and short pauses while keeping the final cut below two minutes.
 
 ## Truthful on-screen claims
 
@@ -159,4 +345,3 @@ the platform in multi-cluster environments.
 - [ ] Final cut is under two minutes and legible at 1080p
 - [ ] Video audio is clear at normal laptop volume
 - [ ] Devpost cover, screenshots, repository link, and setup path are included
-
