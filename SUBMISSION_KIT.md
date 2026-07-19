@@ -152,23 +152,24 @@ by pointing to the entity and relationship counts.
 
 ### Shot 7 — Prove the lifecycle · `1:12–1:30`
 
-**SHOW:** Sentinel at <http://127.0.0.1:5175>. Close **How it works**, then look directly
-below the large headline section. In the row of five number cards, click the far-right
-card labeled **OPEN INCIDENTS**. It appears after **NAMESPACES**.
+**SHOW:** Sentinel at <http://127.0.0.1:5175>. In **01 · Operations Evidence**, click the
+green **OPEN INCIDENTS** control beside the live record count.
 
 **DO BEFORE SPEAKING:** In the panel that opens from the right, click any listed incident
-that says it has lifecycle records. This replaces the list with that incident's detail.
-Scroll inside the right-hand panel until the heading **Resilience proof timeline** is
-visible. The main page behind the panel will look dark and blurred; that is expected.
+that says it has lifecycle records. This opens its operator-ready report. Pause on the
+executive summary, impact, decision, recovery, verification, and operator follow-up.
+Then scroll inside the right-hand panel until **Resilience proof timeline** is visible.
+The main page behind the panel will look dark and blurred; that is expected.
 
-**DO WHILE SPEAKING:** Scroll slowly through **Healthy → Fault injected → Detection →
-Decision → Human approval → Recovery → Verification**. The final stage must be visible
-when you say “why the system acted.”
+**DO WHILE SPEAKING:** Begin on the operator-ready report. Then scroll slowly through
+**Healthy → Fault injected → Detection → Decision → Human approval → Recovery →
+Verification**. The final stage must be visible at the end of the narration.
 
 **SAY:**
 
-> One incident shows the whole loop: healthy, fault, detection, decision, recovery, and
-> verification. We don’t call it fixed until the final health check passes.
+> One incident gives us the complete report—what happened, what was affected, what the
+> system decided, and how recovery was verified. We don’t call it fixed until the final
+> health check passes.
 
 **END ON:** Keep the right-hand panel open with **Verification** visible, including its
 result and evidence source.
