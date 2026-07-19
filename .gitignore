@@ -38,3 +38,6 @@ dist/
 # Generated judge-demo evidence (keep only the directory marker)
 artifacts/demo-platform/*
 !artifacts/demo-platform/.gitkeep
+!artifacts/demo-platform/README.md
+!artifacts/demo-platform/sample-portable-proof.json
+!artifacts/demo-platform/sample-portable-proof.md

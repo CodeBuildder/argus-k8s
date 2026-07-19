@@ -50,6 +50,10 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 Choose one path. The first two focus on Argus; the platform path launches the complete
 cross-agent judge experience.
 
+Recording or submitting the complete platform? Use the
+**[Judge Submission Kit](SUBMISSION_KIT.md)** for the exact under-three-minute script, screen
+sequence, truthful claim boundaries, fallback plan, screenshots, and Devpost copy.
+
 | Path | Use it when | Command |
 |---|---|---|
 | **Local synthetic** | You want the fastest judge/reviewer experience and do not have Kubernetes | `make demo-local` |
@@ -182,6 +186,12 @@ correlation timings, recovery status, approval policy, OpenAI availability, sour
 seed, and provenance. It deliberately reports availability as **not measured** for this
 deterministic path instead of turning a simulator recovery into a false production-SLA
 claim.
+
+GitHub includes a sanitized example of that output so reviewers can inspect the proof
+without running the platform: [portable proof](artifacts/demo-platform/sample-portable-proof.md)
+and its [machine-readable JSON](artifacts/demo-platform/sample-portable-proof.json).
+Timestamped artifacts from your own runs remain local and ignored to avoid committing
+machine-specific, continuously changing demo output.
 
 | Console | URL | What to show |
 |---|---|---|
