@@ -38,6 +38,8 @@ grep -q 'PHOENIX_LOCAL_DEMO=true' "${local_script}"
 grep -q 'synthetic cluster topology' "${local_script}"
 grep -q 'docker run --rm' "${local_script}"
 grep -q 'demo-data.*synthetic' "${repo_root}/scripts/seed-platform-local.sh"
+grep -q 'stage:"verification"' "${repo_root}/scripts/platform-local-feed.sh"
+grep -q 'evidence_source:"Synthetic simulator + replay feed"' "${repo_root}/scripts/platform-local-feed.sh"
 
 jq -n '{
   schema_version: "1.0", verdict: "PASS", run_id: "test", generated_at: "2026-07-18T00:00:00Z",
