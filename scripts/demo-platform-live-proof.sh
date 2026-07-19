@@ -18,6 +18,7 @@ scenario_id=""
 
 fail() { echo "ERROR: $*" >&2; exit 1; }
 require_command() { command -v "$1" >/dev/null 2>&1 || fail "Missing command: $1"; }
+iso_epoch() { python3 -c 'import datetime,sys; print(datetime.datetime.fromtimestamp(int(sys.argv[1]), datetime.timezone.utc).isoformat().replace("+00:00", "Z"))' "$1"; }
 
 cleanup() {
   trap - INT TERM EXIT
@@ -95,12 +96,6 @@ elif [[ -t 0 ]]; then
 else
   fail "Non-interactive runs require LIVE_DEMO_CONTEXT=${context}."
 fi
-
-if [[ -z "${authorized_phrase}" && -t 0 ]]; then
-  echo "The next approval permits one real PodChaos against one of two disposable replicas."
-  read -r -p "Type INJECT LIVE FAULT to continue: " authorized_phrase
-fi
-[[ "${authorized_phrase}" == "INJECT LIVE FAULT" ]] || fail "Live fault confirmation failed."
 
 kubectl --context "${context}" get namespace "${namespace}" >/dev/null 2>&1 &&
   fail "Namespace ${namespace} already exists; refusing to reuse or delete it."
@@ -183,6 +178,7 @@ for _attempt in $(seq 1 30); do
   sleep 1
 done
 curl --fail --silent --max-time 2 http://127.0.0.1:18080/ >/dev/null || fail "Demo service is not reachable."
+healthy_epoch="$(date +%s)"
 
 probe_log="${log_dir}/availability.log"
 (
@@ -194,12 +190,13 @@ probe_log="${log_dir}/availability.log"
 probe_pid=$!
 
 echo "==> Launching bounded real Falco-triggering workload"
+fault_injected_epoch="$(date +%s)"
 DEMO_NAMESPACE="${namespace}" bash "${repo_root}/cluster/test-diverse-threats.sh" >"${log_dir}/threats.log" 2>&1
 kubectl --context "${context}" -n "${namespace}" wait --for=condition=Ready pod -l threat-type --timeout=120s >/dev/null
 
 argus_incident_file="${log_dir}/argus-incident.json"
 argus_detected=false
-evidence_started_epoch="$(date +%s)"
+evidence_started_epoch="${fault_injected_epoch}"
 for _attempt in $(seq 1 "${evidence_wait_seconds}"); do
   if curl --fail --silent --max-time 10 http://127.0.0.1:8000/incidents |
     jq -e --arg namespace "${namespace}" '[.[] | select((.namespace // "") == $namespace)] | first' >"${argus_incident_file}"; then
@@ -210,6 +207,14 @@ for _attempt in $(seq 1 "${evidence_wait_seconds}"); do
 done
 [[ "${argus_detected}" == "true" ]] || fail "Argus did not expose Falco evidence for ${namespace} within ${evidence_wait_seconds}s."
 argus_detected_epoch="$(date +%s)"
+decision_epoch="$(date +%s)"
+
+if [[ -z "${authorized_phrase}" && -t 0 ]]; then
+  echo "Observed Argus evidence is now present. The next approval permits one real PodChaos against one of two disposable replicas."
+  read -r -p "Type INJECT LIVE FAULT to authorize recovery: " authorized_phrase
+fi
+[[ "${authorized_phrase}" == "INJECT LIVE FAULT" ]] || fail "Live fault confirmation failed."
+approved_epoch="$(date +%s)"
 
 old_pods="$(kubectl --context "${context}" -n "${namespace}" get pods -l app=sentinel-live-target -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')"
 correlation_id="live-proof-$(date -u +%Y%m%dT%H%M%SZ)-$$"
@@ -244,6 +249,7 @@ probe_total="$(wc -l <"${probe_log}" | tr -d ' ')"
 probe_success="$(awk '$1 == 1 {count++} END {print count+0}' "${probe_log}")"
 ((probe_total > 0)) || fail "Availability probe produced no samples."
 availability="$(awk -v success="${probe_success}" -v total="${probe_total}" 'BEGIN {printf "%.2f", (success/total)*100}')"
+verification_epoch="$(date +%s)"
 
 echo "==> Correlating verified live evidence through Sentinel"
 entity_id="service/${namespace}/sentinel-live-target"
@@ -253,13 +259,13 @@ curl --fail --silent -X POST http://127.0.0.1:8010/entities -H 'Content-Type: ap
 curl --fail --silent -X POST http://127.0.0.1:8010/findings -H 'Content-Type: application/json' \
   -d "$(jq -nc --arg id "argus-${correlation_id}" --arg ts "${timestamp}" --arg entity "${entity_id}" --arg corr "${correlation_id}" --slurpfile original "${argus_incident_file}" '{event_id:$id,type:"finding",source:"argus",timestamp:$ts,entity_id:$entity,severity:"high",correlation_id:$corr,replayed:false,payload:{finding_type:"falco_alert",assessment:"Observed Falco runtime evidence in isolated live-demo namespace",provenance:"observed",evidence_source:"argus_incidents_api",original_incident:$original[0]}}')" >/dev/null
 curl --fail --silent -X POST http://127.0.0.1:8010/findings -H 'Content-Type: application/json' \
-  -d "$(jq -nc --arg id "phoenix-${correlation_id}" --arg ts "${timestamp}" --arg entity "${entity_id}" --arg corr "${correlation_id}" --arg scenario "${scenario_id}" --arg backend "${backend_ref}" --arg replacement "${replacement_name}" --arg availability "${availability}" --argjson recovery "${recovery_seconds}" '{event_id:$id,type:"finding",source:"phoenix",timestamp:$ts,entity_id:$entity,severity:"high",correlation_id:$corr,payload:{finding_type:"healing_action",outcome:"verified_recovery",description:"Chaos Mesh killed one disposable replica; Kubernetes replaced it and service health was verified",provenance:"live_chaos",domain:"chaos_mesh",scenario_id:$scenario,backend_ref:$backend,replacement_pod:$replacement,recovery_seconds:$recovery,measured_availability_percent:$availability,approval_required:true,approval_record:"INJECT LIVE FAULT"}}')" >/dev/null
+  -d "$(jq -nc --arg id "phoenix-${correlation_id}" --arg ts "${timestamp}" --arg entity "${entity_id}" --arg corr "${correlation_id}" --arg scenario "${scenario_id}" --arg backend "${backend_ref}" --arg replacement "${replacement_name}" --arg availability "${availability}" --arg healthy "$(iso_epoch "${healthy_epoch}")" --arg fault "$(iso_epoch "${fault_injected_epoch}")" --arg detected "$(iso_epoch "${argus_detected_epoch}")" --arg decision "$(iso_epoch "${decision_epoch}")" --arg approval "$(iso_epoch "${approved_epoch}")" --arg recovered "$(iso_epoch "${recovery_epoch}")" --arg verified "$(iso_epoch "${verification_epoch}")" --argjson detection_ms "$(((argus_detected_epoch - fault_injected_epoch) * 1000))" --argjson recovery_seconds "${recovery_seconds}" '{event_id:$id,type:"finding",source:"phoenix",timestamp:$ts,entity_id:$entity,severity:"high",correlation_id:$corr,payload:{finding_type:"healing_action",outcome:"verified_recovery",description:"Chaos Mesh killed one disposable replica; Kubernetes replaced it and service health was verified",provenance:"live_chaos",domain:"chaos_mesh",scenario_id:$scenario,backend_ref:$backend,replacement_pod:$replacement,recovery_seconds:$recovery_seconds,measured_availability_percent:$availability,approval_required:true,approval_record:"INJECT LIVE FAULT",evidence_source:"Falco + Argus + Phoenix + Kubernetes + HTTP probe",metrics:{detection_ms:$detection_ms,recovery_ms:($recovery_seconds*1000),availability_percent:($availability|tonumber)},lifecycle:[{stage:"healthy",timestamp:$healthy,source:"HTTP probe",evidence:"Two Ready replicas served successful HTTP probes",status:"verified"},{stage:"fault_injected",timestamp:$fault,source:"bounded workload",evidence:"Isolated Falco-triggering workload started",status:"observed"},{stage:"detection",timestamp:$detected,source:"Argus + Falco",evidence:"Argus incidents API exposed observed runtime evidence",status:"observed"},{stage:"decision",timestamp:$decision,source:"Sentinel guardrail",evidence:"Bounded one-of-two recovery action required human approval",status:"gated"},{stage:"human_approval",timestamp:$approval,source:"operator",evidence:"Operator typed INJECT LIVE FAULT after detection",status:"approved"},{stage:"recovery",timestamp:$recovered,source:"Phoenix + Kubernetes",evidence:("Replacement pod " + $replacement + " became Ready"),status:"recovered"},{stage:"verification",timestamp:$verified,source:"HTTP probe + Kubernetes",evidence:"Two replicas Ready and continuous availability calculated",status:"verified"}]}}')" >/dev/null
 
 incident_file="${log_dir}/sentinel-incident.json"
 verified=false
 for _attempt in $(seq 1 60); do
   if curl --fail --silent --max-time 25 http://127.0.0.1:5175/api/overview |
-    jq -e --arg correlation_id "${correlation_id}" '.incidents[] | select(.correlation_id == $correlation_id and .sources == ["argus","phoenix"] and .provenance == ["live_chaos","observed"])' >"${incident_file}"; then
+    jq -e --arg correlation_id "${correlation_id}" '.incidents[] | select(.correlation_id == $correlation_id and .sources == ["argus","phoenix"] and .provenance == ["live_chaos","observed"] and (.proof.lifecycle | length) == 7 and (.proof.metrics.availability_percent | type) == "number")' >"${incident_file}"; then
     verified=true; break
   fi
   sleep 1

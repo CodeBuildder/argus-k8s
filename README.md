@@ -55,7 +55,7 @@ cross-agent judge experience.
 | **Local synthetic** | You want the fastest judge/reviewer experience and do not have Kubernetes | `make demo-local` |
 | **Live k3s** | You have the three-node Argus cluster and want real Falco, Cilium, and Kyverno evidence | `make demo-cluster-dry-run`, then `make demo-cluster` |
 | **Full platform, cluster-free** | Recommended judge path: all three products, realistic synthetic topology, no Kubernetes | `make demo-platform-dry-run`, then `make demo-platform` |
-| **Full platform, live k3s** | Maintainer/video path: real cluster services with deterministic safe evidence | `make demo-platform-live-dry-run`, then `make demo-platform-live` |
+| **Full platform, live k3s** | Maintainer/video path: observed evidence, approved live chaos, measured recovery | `make doctor-live`, then `make demo-platform-live` |
 
 ### Path A — local synthetic, no cluster required
 
@@ -159,7 +159,7 @@ npm --prefix ../sentinel-stack/phoenix/dashboard install
 Run the non-mutating preflight:
 
 ```bash
-make demo-platform-dry-run
+make doctor
 ```
 
 Then launch the complete experience:
@@ -194,6 +194,9 @@ Every synthetic entity has `demo-data=synthetic`; evidence is explicitly labeled
 or measured production availability. On `Ctrl-C`, it stops its local processes and
 removes its disposable Redis container. It replaces only known project listeners and
 kubectl port-forwards on reserved demo ports; unrelated listeners cause a safe failure.
+The Sentinel incident drawer uses the same seven-stage resilience timeline as the live
+proof, while labeling every portable stage as replayed or simulated and leaving
+availability explicitly unmeasured.
 
 ### Path D — live k3s-backed platform proof
 
@@ -201,7 +204,7 @@ Run the guarded real-cluster proof separately:
 
 ```bash
 kubectl config use-context argus
-make demo-platform-live-dry-run
+make doctor-live
 make demo-platform-live
 ```
 
