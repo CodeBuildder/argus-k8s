@@ -154,10 +154,14 @@ by pointing to the entity and relationship counts.
 
 ### Shot 7 — Prove the lifecycle · `1:10–1:28`
 
-**SHOW:** The Sentinel incident drawer containing the seven-stage resilience timeline.
+**SHOW:** Sentinel at <http://127.0.0.1:5175>. Close **How it works**, then look directly
+below the large headline section. In the row of five number cards, click the far-right
+card labeled **OPEN INCIDENTS**. It appears after **NAMESPACES**.
 
-**DO BEFORE SPEAKING:** Open the prepared correlated incident. Position the drawer at
-the start of the timeline.
+**DO BEFORE SPEAKING:** In the panel that opens from the right, click any listed incident
+that says it has lifecycle records. This replaces the list with that incident's detail.
+Scroll inside the right-hand panel until the heading **Resilience proof timeline** is
+visible. The main page behind the panel will look dark and blurred; that is expected.
 
 **DO WHILE SPEAKING:** Scroll slowly through **Healthy → Fault injected → Detection →
 Decision → Human approval → Recovery → Verification**. The final stage must be visible
@@ -169,7 +173,8 @@ when you say “why the system acted.”
 > timestamp, evidence source, and outcome, so an operator can audit exactly why the
 > system acted.
 
-**END ON:** **Verification** visible, with its result and evidence source.
+**END ON:** Keep the right-hand panel open with **Verification** visible, including its
+result and evidence source.
 
 ---
 
