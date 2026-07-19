@@ -57,7 +57,7 @@ Work started during the submission period includes:
 ### Phase 16 — judge video and submission kit
 
 `SUBMISSION_KIT.md` is the single rehearsal and submission source. It provides a timed
-2:50 recording plan with the exact screen, action, and narration for every shot; truthful
+2:55 recording plan with the exact screen, action, and narration for every shot; truthful
 portable-versus-live claim boundaries; recording fallbacks; a screenshot list; copy-ready
 Devpost sections; and a final quality gate. The story explicitly covers what was built,
 how Codex accelerated the multi-repository engineering workflow, how GPT-5.6 operates

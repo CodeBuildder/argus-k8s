@@ -1,7 +1,7 @@
 # Sentinel Platform — Judge Submission Kit
 
-> **Core message:** Detect early. Break safely. Recover before customers feel it—with
-> humans governing high-risk actions.
+> **Core message:** One autonomous protection loop across admission, kernel/runtime,
+> network enforcement, and resilience—with Sentinel coordinating every layer.
 
 This is the single recording and submission guide. Run commands from `argus-k8s/`.
 The primary video uses the portable demo so the recording is deterministic. A short,
@@ -41,7 +41,7 @@ For every shot below:
 
 Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
-## The 2:50 recording script
+## The 2:55 recording script
 
 ### Shot 1 — The problem · `0:00–0:09`
 
@@ -51,14 +51,14 @@ Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
 **SAY:**
 
-> Most platforms wait for an alert or outage. Sentinel doesn’t. It looks for threats and
-> failures before customers have to find them.
+> Most platforms wait at the application or alert layer. Sentinel protects the system
+> across every operational layer, before customers have to find the problem.
 
 **END ON:** The unchanged Sentinel home page.
 
 ---
 
-### Shot 2 — Connect the platform · `0:09–0:22`
+### Shot 2 — Show the layered defense · `0:09–0:27`
 
 **SHOW:** The Sentinel **How it works** overlay.
 
@@ -69,14 +69,15 @@ Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
 **SAY:**
 
-> Argus watches admission, the kernel, runtime, and network using Kyverno, eBPF, Falco,
-> and Cilium—catching suspicious behavior close to where it starts.
+> This layered defense is our core advantage. Kyverno blocks unsafe admission. eBPF and
+> Falco watch the kernel and runtime. Cilium contains network behavior at L3, L4, and L7.
+> We can stop a threat at the earliest layer that sees it.
 
 **END ON:** The cursor resting over **Sentinel + OpenAI**.
 
 ---
 
-### Shot 3 — Explain control · `0:22–0:32`
+### Shot 3 — Explain the resilience layer · `0:27–0:39`
 
 **SHOW:** Keep the same **How it works** overlay open.
 
@@ -87,14 +88,15 @@ move to **Phoenix** for the final sentence.
 
 **SAY:**
 
-> Phoenix deliberately tests failures before real outages happen. Safe fixes run
-> automatically; risky actions wait for a person. Every recovery has to prove it worked.
+> Phoenix adds the resilience layer. It deliberately finds failures before a real outage,
+> repairs them, and proves recovery. Safe fixes run automatically; risky actions wait
+> for a person.
 
 **END ON:** The cursor resting over **Phoenix**.
 
 ---
 
-### Shot 4 — Show Argus evidence · `0:32–0:45`
+### Shot 4 — Show Argus evidence · `0:39–0:52`
 
 **SHOW:** Argus threat detail for the highest-severity seeded threat.
 
@@ -106,14 +108,14 @@ response. Do not scroll rapidly.
 
 **SAY:**
 
-> Here, Argus caught suspicious runtime behavior near the kernel and enforcement path.
-> It can contain the workload early, preserve evidence, and stop a larger incident.
+> This one was caught at the runtime layer. Argus can contain the workload right there,
+> preserve the evidence, and stop it from spreading into a larger incident.
 
 **END ON:** The recommended response and evidence visible together.
 
 ---
 
-### Shot 5 — Show Phoenix verification · `0:45–0:58`
+### Shot 5 — Show Phoenix verification · `0:52–1:05`
 
 **SHOW:** Phoenix completed resilience scenario or agent run matching the demo resource.
 
@@ -131,7 +133,7 @@ make its provenance, recovery action, and verified result visible.
 
 ---
 
-### Shot 6 — Show the shared SOG · `0:58–1:12`
+### Shot 6 — Show the Sentinel coordination layer · `1:05–1:21`
 
 **SHOW:** Sentinel home page with both specialist-agent cards and the central SOG card.
 
@@ -143,14 +145,15 @@ by pointing to the entity and relationship counts.
 
 **SAY:**
 
-> Sentinel connects both sides. It knows what Argus stopped, what Phoenix tested, which
-> services depend on each other, and—using OpenAI—what actually needs our attention.
+> Sentinel is the coordination layer above all of this. It connects what Argus stopped,
+> what Phoenix tested, and every affected dependency—then uses OpenAI to explain what
+> needs our attention.
 
 **END ON:** The complete three-card Argus → SOG → Phoenix view.
 
 ---
 
-### Shot 7 — Prove the lifecycle · `1:12–1:30`
+### Shot 7 — Prove the lifecycle · `1:21–1:39`
 
 **SHOW:** Sentinel at <http://127.0.0.1:5175>. In **01 · Operations Evidence**, click the
 green **OPEN INCIDENTS** control beside the live record count.
@@ -176,7 +179,7 @@ result and evidence source.
 
 ---
 
-### Shot 8 — Prove honesty and explainability · `1:30–1:42`
+### Shot 8 — Prove honesty and explainability · `1:39–1:51`
 
 **SHOW:** The incident provenance label, followed by the Live Risk explanation popup.
 
@@ -194,7 +197,7 @@ close the incident, click **Live Risk**, and reveal its supporting score evidenc
 
 ---
 
-### Shot 9 — Show GPT-5.6 working · `1:42–2:02`
+### Shot 9 — Show GPT-5.6 working · `1:51–2:11`
 
 **SHOW:** Sentinel's **OpenAI Evidence Briefing** panel with a completed briefing already
 visible. Generate it before recording; do not wait for the API on camera.
@@ -216,7 +219,7 @@ action. Do not scroll faster than the viewer can read.
 
 ---
 
-### Shot 10 — Explain how Codex built it · `2:02–2:25`
+### Shot 10 — Explain how Codex built it · `2:11–2:34`
 
 **SHOW:** The repository in your IDE. Put `BUILD_WEEK.md` on the left and the Git commit
 history or pull-request list on the right. Make Phases 7–16 visible.
@@ -240,7 +243,7 @@ the workflow.
 
 ---
 
-### Shot 11 — Show the proof artifact · `2:25–2:43`
+### Shot 11 — Show the proof artifact · `2:34–2:48`
 
 **SHOW:** Prefer `artifacts/demo-platform/latest-live-demo.md`. If no live artifact is
 available, show `artifacts/demo-platform/latest-demo.md` and keep its simulator/replay
@@ -261,7 +264,7 @@ availability measurement.
 
 ---
 
-### Shot 12 — Close · `2:43–2:50`
+### Shot 12 — Close · `2:48–2:55`
 
 **SHOW:** Sentinel home page and its main headline.
 
@@ -270,12 +273,12 @@ empty space.
 
 **SAY:**
 
-> Find it early, fix it safely, verify the outcome, and keep people in control.
+> Four protection layers, one evidence loop: find it early, fix it safely, and prove it.
 
 **END ON:** Hold the Sentinel headline silently for one full second, then fade to black.
 
-The voice-over is paced for conversational delivery and targets 2:50. The official limit
-is under three minutes, leaving ten seconds of export and upload safety margin.
+The voice-over is paced for conversational delivery and targets 2:55. The official limit
+is under three minutes, leaving five seconds of export and upload safety margin.
 
 ## Truthful on-screen claims
 
@@ -319,9 +322,9 @@ technical proof image.
 
 ### One-line pitch
 
-Sentinel continuously finds threats and resilience weaknesses close to their source,
-contains or recovers them before impact spreads, verifies the outcome, and keeps humans
-in control of high-risk actions.
+Sentinel coordinates autonomous protection across admission, kernel/runtime, network
+enforcement, and resilience—stopping problems at the earliest layer that sees them and
+keeping humans in control of high-risk actions.
 
 ### Inspiration
 
@@ -367,9 +370,12 @@ workflow for every phase, while making the product and safety decisions explicit
 
 ### What makes it different
 
-Sentinel does not stop at detection or claim recovery because an action was dispatched.
-It connects security and resilience evidence, visibly distinguishes synthetic from live
-proof, and closes the loop only after recovery is verified.
+Most platforms observe from one layer and react after impact. Sentinel coordinates a
+layered protection model: Kyverno at admission, eBPF and Falco at kernel/runtime, Cilium
+at L3/L4/L7 network enforcement, and Phoenix at service resilience. A threat or weakness
+can be handled by the earliest capable layer, while the SOG preserves one explanation
+and governance trail. Sentinel never claims recovery merely because an action was
+dispatched; the loop closes only after verification.
 
 ### Challenges
 
@@ -403,7 +409,7 @@ the platform in multi-cluster environments.
 - [ ] Every spoken metric is visible on screen
 - [ ] Portable and live provenance are never mixed
 - [ ] Video explicitly explains what was built, how Codex accelerated it, and how GPT-5.6 works inside it
-- [ ] Final cut is under three minutes—target 2:50—and legible at 1080p
+- [ ] Final cut is under three minutes—target 2:55—and legible at 1080p
 - [ ] Video audio is clear at normal laptop volume
 - [ ] Run `/feedback` in the primary Codex build thread and save the required Session ID
 - [ ] Upload the final video publicly to YouTube and verify it plays while signed out
