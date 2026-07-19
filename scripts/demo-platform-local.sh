@@ -202,7 +202,7 @@ verified=false
 incident_file="${log_dir}/verified-incident.json"
 for _attempt in $(seq 1 60); do
   if curl --fail --silent --max-time 25 http://127.0.0.1:5175/api/overview |
-    jq -e --arg correlation_id "${correlation_id}" '.incidents[] | select(.correlation_id == $correlation_id and .sources == ["argus","phoenix"] and .provenance == ["replayed","simulator"])' >"${incident_file}"; then
+    jq -e --arg correlation_id "${correlation_id}" '.incidents[] | select(.correlation_id == $correlation_id and .sources == ["argus","phoenix"] and .provenance == ["replayed","simulator"] and (.proof.lifecycle | length) == 7 and .proof.metrics.availability_percent == "not measured")' >"${incident_file}"; then
     verified=true
     break
   fi
