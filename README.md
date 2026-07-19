@@ -187,6 +187,12 @@ seed, and provenance. It deliberately reports availability as **not measured** f
 deterministic path instead of turning a simulator recovery into a false production-SLA
 claim.
 
+GitHub includes a sanitized example of that output so reviewers can inspect the proof
+without running the platform: [portable proof](artifacts/demo-platform/sample-portable-proof.md)
+and its [machine-readable JSON](artifacts/demo-platform/sample-portable-proof.json).
+Timestamped artifacts from your own runs remain local and ignored to avoid committing
+machine-specific, continuously changing demo output.
+
 | Console | URL | What to show |
 |---|---|---|
 | Argus | **http://127.0.0.1:5173** | Security evidence and response |

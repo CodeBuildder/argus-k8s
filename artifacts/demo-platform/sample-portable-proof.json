@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "verdict": "PASS",
+  "run_id": "committed-portable-sample",
+  "mode": "deterministic replay + simulator",
+  "correlation": {
+    "id": "sample-portable-checkout-egress",
+    "verified": true,
+    "sources": ["argus", "phoenix"],
+    "incident": {
+      "title": "Argus to Phoenix lifecycle for checkout",
+      "status": "resolved",
+      "severity": "critical",
+      "evidence_count": 2,
+      "provenance": ["replayed", "simulator"],
+      "report": {
+        "executive_summary": "Blocked suspicious egress from checkout. Phoenix reported verified recovery.",
+        "detection": "Blocked suspicious egress from checkout",
+        "affected_resource": "checkout",
+        "impact": "Critical evidence was attached to checkout; no wider impact is claimed without supporting evidence.",
+        "root_cause": "Not established by the supplied evidence",
+        "decision": "Bounded simulator recovery selected",
+        "governance": "Approval not required for bounded simulator action",
+        "recovery": "Network latency recovered within SLO",
+        "verification": "Simulator outcome verified; availability not measured",
+        "operator_next_step": "Review the supporting evidence and keep the resource under observation.",
+        "evidence_source": "Synthetic simulator + replay fixture"
+      },
+      "proof": {
+        "metrics": {"detection_ms": 1000, "recovery_ms": 1000, "availability_percent": "not measured"},
+        "lifecycle": [
+          {"stage": "healthy", "source": "synthetic fixture", "status": "simulated", "evidence": "Synthetic service baseline established"},
+          {"stage": "fault_injected", "source": "Phoenix simulator", "status": "simulated", "evidence": "Synthetic fault activated; no cluster mutation"},
+          {"stage": "detection", "source": "replayed Argus", "status": "replayed", "evidence": "Replayed evaluation finding published"},
+          {"stage": "decision", "source": "Sentinel simulator policy", "status": "simulated", "evidence": "Bounded simulator recovery selected"},
+          {"stage": "human_approval", "source": "governance policy", "status": "not required", "evidence": "Approval not required for bounded simulator action"},
+          {"stage": "recovery", "source": "Phoenix simulator", "status": "simulated", "evidence": "Network latency recovered within SLO"},
+          {"stage": "verification", "source": "synthetic health check", "status": "simulated", "evidence": "Simulator recovery verified; availability not measured"}
+        ]
+      }
+    }
+  },
+  "entity": {"id": "service/storefront/checkout"},
+  "recovery": {"result": "verified_recovery", "availability": "recovery verified; availability percentage not measured"},
+  "governance": {"approval_required": false, "reason": "bounded simulator action"},
+  "openai": {"configured": true, "briefing_generated": false},
+  "evidence": {"provenance": ["replayed", "simulator"], "seed": 42, "live_chaos": false},
+  "interpretation": "A real local SOG and all three product services processed explicitly synthetic topology, replayed Argus evidence, and Phoenix simulator outcomes. No Kubernetes API or live fault was used."
+}
