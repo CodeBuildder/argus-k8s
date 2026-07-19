@@ -50,6 +50,10 @@ Commit history: https://github.com/CodeBuildder/argus-k8s/commits/main
 Choose one path. The first two focus on Argus; the platform path launches the complete
 cross-agent judge experience.
 
+Recording or submitting the complete platform? Use the
+**[Judge Submission Kit](SUBMISSION_KIT.md)** for the exact two-minute script, screen
+sequence, truthful claim boundaries, fallback plan, screenshots, and Devpost copy.
+
 | Path | Use it when | Command |
 |---|---|---|
 | **Local synthetic** | You want the fastest judge/reviewer experience and do not have Kubernetes | `make demo-local` |
