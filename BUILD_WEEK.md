@@ -47,7 +47,17 @@ Work started during the submission period includes:
 | Phase 8 | Auditable judge evidence scorecard and JSON/Markdown run artifacts | Issue #112 |
 | Phase 9 | Cluster-free full-platform judge demo and explicit live-k3s command | Issue #114 |
 | Phase 10 | Guarded live k3s detection, chaos, recovery, correlation, and measured evidence | Issue #116 |
+| Phase 11 | Judge onboarding doctor, single-path setup, and rehearsal diagnostics | Issue #118 |
 | Final video | Two-minute judge story with frame-by-frame screen, action, narration, timing, and fallback plan | Pending |
+
+### Phase 11 — judge onboarding and rehearsal doctor
+
+`make doctor` and `make doctor-live` are read-only entry points for the portable and live
+proofs. They validate the sibling repository layout, required tools, secret-safe OpenAI
+configuration status, runtime availability, local console dependencies, and—only in
+live mode—the complete k3s stack. Each run ends with an unambiguous verdict and exact
+next command. `setup.md`, the root README, and Make help now present the same choose-one
+path and distinguish replay/simulator claims from observed/live-chaos measurements.
 
 ### Phase 10 — observed live-cluster proof
 

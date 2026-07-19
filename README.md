@@ -55,7 +55,7 @@ cross-agent judge experience.
 | **Local synthetic** | You want the fastest judge/reviewer experience and do not have Kubernetes | `make demo-local` |
 | **Live k3s** | You have the three-node Argus cluster and want real Falco, Cilium, and Kyverno evidence | `make demo-cluster-dry-run`, then `make demo-cluster` |
 | **Full platform, cluster-free** | Recommended judge path: all three products, realistic synthetic topology, no Kubernetes | `make demo-platform-dry-run`, then `make demo-platform` |
-| **Full platform, live k3s** | Maintainer/video path: real cluster services with deterministic safe evidence | `make demo-platform-live-dry-run`, then `make demo-platform-live` |
+| **Full platform, live k3s** | Maintainer/video path: observed evidence, approved live chaos, measured recovery | `make doctor-live`, then `make demo-platform-live` |
 
 ### Path A — local synthetic, no cluster required
 
@@ -159,7 +159,7 @@ npm --prefix ../sentinel-stack/phoenix/dashboard install
 Run the non-mutating preflight:
 
 ```bash
-make demo-platform-dry-run
+make doctor
 ```
 
 Then launch the complete experience:
@@ -201,7 +201,7 @@ Run the guarded real-cluster proof separately:
 
 ```bash
 kubectl config use-context argus
-make demo-platform-live-dry-run
+make doctor-live
 make demo-platform-live
 ```
 
