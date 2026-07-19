@@ -189,6 +189,10 @@ claim.
 | Phoenix | **http://127.0.0.1:5174** | Resilience outcome and recovery |
 | Sentinel | **http://127.0.0.1:5175** | Unified correlated incident and fleet decision |
 
+Sentinel opens with a read-only **Presentation Preflight** panel. It verifies Argus,
+Phoenix, Sentinel, SOG, and OpenAI; Kubernetes-only checks are visibly N/A in portable
+mode. The demo refuses to report PASS until every required presentation check is ready.
+
 Every synthetic entity has `demo-data=synthetic`; evidence is explicitly labeled
 `replayed` or `simulator`. The local demo never claims live Falco detection, live chaos,
 or measured production availability. On `Ctrl-C`, it stops its local processes and
@@ -217,6 +221,8 @@ new replacement pod is Ready, both replicas are Ready, continuous HTTP availabil
 measured, and Sentinel exposes the correlated Argus + Phoenix incident. `Ctrl-C` stops
 the consoles and deletes only the isolated demo namespace. Evidence is written to
 `artifacts/demo-platform/latest-live-demo.{json,md}`.
+The same readiness result is visible inside Sentinel with live Kubernetes, Cilium,
+Falco, Kyverno, and Chaos Mesh evidence and remediation for any failed component.
 
 ## Part of the Sentinel multi-agent platform
 

@@ -49,6 +49,8 @@ Work started during the submission period includes:
 | Phase 10 | Guarded live k3s detection, chaos, recovery, correlation, and measured evidence | Issue #116 |
 | Phase 11 | Judge onboarding doctor, single-path setup, and rehearsal diagnostics | Issue #118 |
 | Phase 12 | Canonical resilience lifecycle and unambiguous evidence provenance | Argus #120 / Sentinel #63 |
+| Phase 13 | Persistent Phoenix scenarios, approvals, agent runs, and restart history | Phoenix #73 |
+| Phase 14 | Judge-facing read-only platform readiness panel | Argus #122 / Sentinel #65 |
 | Final video | Two-minute judge story with frame-by-frame screen, action, narration, timing, and fallback plan | Pending |
 
 ### Phase 12 — truthful resilience proof timeline
