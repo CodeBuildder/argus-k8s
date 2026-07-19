@@ -1,10 +1,74 @@
-# Argus — Local Setup
+# Sentinel Platform — Judge Setup and Argus Cluster Guide
 
-This guide covers everything needed to run Argus locally: spinning up the cluster, deploying the security stack, and running the console.
+This guide has one entry point. Choose exactly one path, run its read-only doctor, then
+run the command it prints. The portable path is recommended for judges; the live path is
+the measured k3s proof used for the technical demo.
+
+## Start here — choose one path
+
+The repositories must share this layout:
+
+```text
+Projects/
+├── argus-k8s/                 # run every command below here
+└── sentinel-stack/
+    ├── phoenix/
+    ├── sentinel/
+    └── sentinel-platform/
+```
+
+### Path A — portable full-platform demo (recommended)
+
+This path needs Docker or OrbStack but does not need Kubernetes. It runs the real local
+Argus, Phoenix, Sentinel, and SOG services against clearly labeled synthetic topology,
+replayed Argus evidence, and Phoenix simulator outcomes.
+
+```bash
+make doctor
+make demo-platform
+```
+
+Open the three consoles:
+
+- Argus: <http://127.0.0.1:5173>
+- Phoenix: <http://127.0.0.1:5174>
+- Sentinel: <http://127.0.0.1:5175>
+
+Successful runs write `artifacts/demo-platform/latest-demo.{json,md}`. `Ctrl-C` stops
+only command-owned processes and removes the disposable Redis container.
+
+### Path B — guarded live k3s proof
+
+This path needs the existing three-node `argus` k3s cluster and deployed security,
+chaos, agent, and SOG stack. The doctor is read-only:
+
+```bash
+kubectl config use-context argus
+make doctor-live
+make demo-platform-live
+```
+
+The live command separately asks for the exact context and `INJECT LIVE FAULT`. It
+creates only `sentinel-live-demo`, targets one of two disposable replicas, waits for
+observed Argus evidence, verifies the real Phoenix/Chaos Mesh object and Kubernetes
+replacement, measures HTTP availability and recovery time, and requires Sentinel
+correlation. Successful runs write
+`artifacts/demo-platform/latest-live-demo.{json,md}`. `Ctrl-C` deletes only the isolated
+namespace.
+
+### What the modes claim
+
+| Mode | Evidence provenance | Kubernetes mutation | Availability claim |
+|---|---|---:|---|
+| Portable | `replayed` + `simulator` | None | Explicitly not measured |
+| Live k3s | `observed` + `live_chaos` | Isolated, approved namespace only | Measured by continuous HTTP probes |
+
+The remainder of this document explains how the maintained Argus k3s environment is
+constructed and troubleshot. Judges using Path A can stop here.
 
 ---
 
-## Prerequisites
+## Cluster prerequisites
 
 **Hardware:** macOS on Apple Silicon (M1/M2/M3). The cluster runs three ARM64 Linux VMs.
 

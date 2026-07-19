@@ -34,3 +34,7 @@ dist/
 # IDE
 .vscode/
 .idea/
+
+# Generated judge-demo evidence (keep only the directory marker)
+artifacts/demo-platform/*
+!artifacts/demo-platform/.gitkeep

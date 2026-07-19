@@ -1,6 +1,6 @@
 .PHONY: help cluster-up cluster-down cluster-status deploy-cilium deploy-falco \
         deploy-kyverno deploy-observability deploy-agent deploy-ui \
-        setup-local dev-agent dev-ui demo-local demo-platform demo-platform-dry-run demo-cluster demo-cluster-dry-run hubble-ui grafana-ui k9s \
+        setup-local doctor doctor-live dev-agent dev-ui demo-local demo-platform demo-platform-local demo-platform-live demo-platform-dry-run demo-platform-live-dry-run demo-cluster demo-cluster-dry-run hubble-ui grafana-ui k9s \
         test test-agent test-ui test-cluster-demo test-platform-demo simulate-threats clean
 
 THREAT_COUNT ?= 10
@@ -27,10 +27,15 @@ help:
 	@echo "    make deploy-observability  Install Prometheus + Grafana + Loki"
 	@echo ""
 	@echo "  Application"
+	@echo "    make doctor                Diagnose the portable judge path without changes"
+	@echo "    make doctor-live           Diagnose the live k3s proof without changes"
 	@echo "    make setup-local           Install local backend and UI dependencies"
 	@echo "    make demo-local            Start a populated cluster-free demo"
-	@echo "    make demo-platform         Start the full Argus + Phoenix + Sentinel judge demo"
-	@echo "    make demo-platform-dry-run Validate the full platform demo without starting anything"
+	@echo "    make demo-platform         Start the cluster-free full-platform judge demo"
+	@echo "    make demo-platform-local   Same cluster-free full-platform judge demo"
+	@echo "    make demo-platform-live    Start the real k3s-backed platform proof"
+	@echo "    make demo-platform-dry-run Validate local demo prerequisites without changes"
+	@echo "    make demo-platform-live-dry-run Validate live k3s prerequisites without changes"
 	@echo "    make dev-agent             Start only the backend on localhost:8000"
 	@echo "    make dev-ui                Start only the console on localhost:5173"
 	@echo "    make deploy-agent          Build and deploy AI agent"
@@ -104,6 +109,12 @@ setup-local:
 	.venv/bin/pip install -r agent/requirements.txt
 	npm --prefix ui ci
 
+doctor:
+	@bash scripts/demo-doctor.sh local
+
+doctor-live:
+	@bash scripts/demo-doctor.sh live
+
 dev-agent:
 	@test -x .venv/bin/python || (echo "Missing local environment. Run: make setup-local" && exit 1)
 	@cd agent/src && ../../.venv/bin/python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
@@ -118,12 +129,26 @@ demo-local:
 demo-platform:
 	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
 	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
-	 bash scripts/demo-platform.sh
+	 SENTINEL_PLATFORM_ROOT="$${SENTINEL_PLATFORM_ROOT:-$(abspath ../sentinel-stack/sentinel-platform)}" \
+	 bash scripts/demo-platform-local.sh
+
+demo-platform-local: demo-platform
+
+demo-platform-live:
+	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
+	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
+	 bash scripts/demo-platform-live-proof.sh
 
 demo-platform-dry-run:
 	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
 	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
-	 DEMO_PLATFORM_DRY_RUN=true bash scripts/demo-platform.sh
+	 SENTINEL_PLATFORM_ROOT="$${SENTINEL_PLATFORM_ROOT:-$(abspath ../sentinel-stack/sentinel-platform)}" \
+	 DEMO_PLATFORM_DRY_RUN=true bash scripts/demo-platform-local.sh
+
+demo-platform-live-dry-run:
+	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
+	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
+	 LIVE_DEMO_DRY_RUN=true bash scripts/demo-platform-live-proof.sh
 
 demo-cluster:
 	@DEMO_CLUSTER_CONTEXT="$(DEMO_CLUSTER_CONTEXT)" \
@@ -147,6 +172,8 @@ test-ui:
 
 test-platform-demo:
 	@bash scripts/tests/test-demo-platform.sh
+	@bash scripts/tests/test-demo-platform-live.sh
+	@bash scripts/tests/test-demo-doctor.sh
 
 test-cluster-demo:
 	@bash scripts/tests/test-demo-cluster.sh

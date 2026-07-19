@@ -6,8 +6,10 @@ phoenix_root="${PHOENIX_ROOT:-$(cd "${argus_root}/../sentinel-stack/phoenix" 2>/
 sentinel_root="${SENTINEL_ROOT:-$(cd "${argus_root}/../sentinel-stack/sentinel" 2>/dev/null && pwd)}"
 dry_run="${DEMO_PLATFORM_DRY_RUN:-false}"
 exit_after_ready="${DEMO_PLATFORM_EXIT_AFTER_READY:-false}"
+skip_seed="${DEMO_PLATFORM_SKIP_SEED:-false}"
 demo_context="${DEMO_PLATFORM_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
 log_dir="$(mktemp -d "${TMPDIR:-/tmp}/sentinel-demo.XXXXXX")"
+artifact_dir="${DEMO_PLATFORM_ARTIFACT_DIR:-${argus_root}/artifacts/demo-platform}"
 owned_pids=()
 
 cleanup() {
@@ -30,6 +32,31 @@ fail() { echo "ERROR: $*" >&2; exit 1; }
 require_command() { command -v "$1" >/dev/null 2>&1 || fail "Missing command: $1"; }
 http_ok() { curl --fail --silent --max-time 2 "$1" >/dev/null 2>&1; }
 port_in_use() { lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1; }
+now_ms() { python3 -c 'import time; print(time.time_ns() // 1_000_000)'; }
+sentinel_ui_ok() {
+  curl --fail --silent --max-time 3 http://127.0.0.1:5175/api/health |
+    jq -e '.service == "sentinel-orchestrator" and (.world_model_connected | type == "boolean")' >/dev/null 2>&1
+}
+
+reclaim_stale_sentinel_ui() {
+  local listener_pid listener_cwd expected_cwd="${sentinel_root}/dashboard"
+  sentinel_ui_ok && return 0
+  port_in_use 5175 || return 0
+
+  listener_pid="$(lsof -nP -tiTCP:5175 -sTCP:LISTEN | head -1)"
+  [[ -n "${listener_pid}" ]] || fail "Port 5175 is occupied but its listener cannot be identified."
+  listener_cwd="$(lsof -a -p "${listener_pid}" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+  [[ "${listener_cwd}" == "${expected_cwd}" ]] ||
+    fail "Port 5175 is occupied by PID ${listener_pid} outside ${expected_cwd}; stop it manually."
+
+  echo "  restart: stale Sentinel UI on 127.0.0.1:5175 (API proxy is not serving JSON)"
+  kill "${listener_pid}"
+  for _attempt in $(seq 1 20); do
+    port_in_use 5175 || return 0
+    sleep 0.25
+  done
+  fail "Stale Sentinel UI PID ${listener_pid} did not release port 5175."
+}
 
 wait_for_url() {
   local label="$1" url="$2" pid="${3:-}" attempt
@@ -128,34 +155,99 @@ start_service "phoenix-ui" 5174 http://127.0.0.1:5174 "${phoenix_root}" \
 start_service "sentinel-api" 8090 http://127.0.0.1:8090/health "${sentinel_root}" \
   env WORLD_MODEL_URL=http://127.0.0.1:8010 OPENAI_API_KEY="${OPENAI_API_KEY:-}" \
   "${sentinel_root}/.venv/bin/python" -m uvicorn main:app --app-dir backend/src --host 127.0.0.1 --port 8090
-start_service "sentinel-ui" 5175 http://127.0.0.1:5175 "${sentinel_root}" \
+reclaim_stale_sentinel_ui
+start_service "sentinel-ui" 5175 http://127.0.0.1:5175/api/health "${sentinel_root}" \
   env VITE_ARGUS_URL=http://127.0.0.1:5173 VITE_PHOENIX_URL=http://127.0.0.1:5174 \
   npm --prefix dashboard run dev -- --host 127.0.0.1 --port 5175
+sentinel_ui_ok || fail "Sentinel UI proxy did not return orchestrator JSON from /api/health."
+
+if [[ "${skip_seed}" == "true" ]]; then
+  echo "Live platform services are ready; waiting for the guarded experiment driver."
+  if [[ "${exit_after_ready}" == "true" ]]; then exit 0; fi
+  while true; do sleep 60; done
+fi
 
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 correlation_id="judge-demo-${run_id}"
 timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 entity_id="service/phoenix-system/phoenix-sim"
+demo_started_ms="$(now_ms)"
 
 echo "==> Publishing deterministic correlated evidence"
 curl --fail --silent --show-error -X POST http://127.0.0.1:8010/findings \
   -H "Content-Type: application/json" \
   -d "{\"event_id\":\"argus-${run_id}\",\"type\":\"finding\",\"source\":\"argus\",\"timestamp\":\"${timestamp}\",\"entity_id\":\"${entity_id}\",\"severity\":\"critical\",\"correlation_id\":\"${correlation_id}\",\"replayed\":true,\"payload\":{\"finding_type\":\"falco_alert\",\"rule\":\"Deterministic C2 Callback Proof\",\"description\":\"Replayed Argus evidence for the judge demo\",\"provenance\":\"replayed\",\"seed\":42}}" >/dev/null
+argus_published_ms="$(now_ms)"
 curl --fail --silent --show-error -X POST http://127.0.0.1:8010/findings \
   -H "Content-Type: application/json" \
-  -d "{\"event_id\":\"phoenix-${run_id}\",\"type\":\"finding\",\"source\":\"phoenix\",\"timestamp\":\"${timestamp}\",\"entity_id\":\"${entity_id}\",\"severity\":\"high\",\"correlation_id\":\"${correlation_id}\",\"payload\":{\"finding_type\":\"healing_action\",\"scenario_id\":\"sim-${run_id}\",\"outcome\":\"verified_recovery\",\"description\":\"Phoenix simulator verified service recovery\",\"provenance\":\"simulator\",\"domain\":\"simulator\",\"seed\":42}}" >/dev/null
+  -d "{\"event_id\":\"phoenix-${run_id}\",\"type\":\"finding\",\"source\":\"phoenix\",\"timestamp\":\"${timestamp}\",\"entity_id\":\"${entity_id}\",\"severity\":\"high\",\"correlation_id\":\"${correlation_id}\",\"payload\":{\"finding_type\":\"healing_action\",\"scenario_id\":\"sim-${run_id}\",\"outcome\":\"verified_recovery\",\"description\":\"Phoenix simulator verified service recovery\",\"provenance\":\"simulator\",\"domain\":\"simulator\",\"seed\":42,\"approval_required\":false,\"approval_reason\":\"bounded simulator action\"}}" >/dev/null
+phoenix_published_ms="$(now_ms)"
 
 echo "==> Verifying the Sentinel incident"
 verified=false
+incident_file="${log_dir}/verified-incident.json"
 for _attempt in $(seq 1 45); do
-  if curl --fail --silent --max-time 25 http://127.0.0.1:8090/overview | jq -e --arg correlation_id "${correlation_id}" '.incidents[] | select(.correlation_id == $correlation_id and .sources == ["argus","phoenix"] and .provenance == ["replayed","simulator"])' >/dev/null; then
+  if curl --fail --silent --max-time 25 http://127.0.0.1:8090/overview | jq -e --arg correlation_id "${correlation_id}" '.incidents[] | select(.correlation_id == $correlation_id and .sources == ["argus","phoenix"] and .provenance == ["replayed","simulator"])' >"${incident_file}"; then
     verified=true
     break
   fi
   sleep 1
 done
 [[ "${verified}" == "true" ]] || fail "Sentinel did not expose correlation ${correlation_id}."
+verified_ms="$(now_ms)"
 
+sentinel_health="$(curl --fail --silent --max-time 5 http://127.0.0.1:8090/health)"
+openai_configured="$(jq -r '.openai_configured == true' <<<"${sentinel_health}")"
+mkdir -p "${artifact_dir}"
+run_json="${artifact_dir}/${correlation_id}.json"
+run_markdown="${artifact_dir}/${correlation_id}.md"
+
+jq -n \
+  --arg run_id "${run_id}" \
+  --arg generated_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  --arg correlation_id "${correlation_id}" \
+  --arg entity_id "${entity_id}" \
+  --argjson openai_configured "${openai_configured}" \
+  --argjson argus_publish_ms "$((argus_published_ms - demo_started_ms))" \
+  --argjson phoenix_publish_ms "$((phoenix_published_ms - argus_published_ms))" \
+  --argjson correlation_ms "$((verified_ms - phoenix_published_ms))" \
+  --argjson lifecycle_ms "$((verified_ms - demo_started_ms))" \
+  --slurpfile incident "${incident_file}" \
+  '{
+    schema_version: "1.0", verdict: "PASS", run_id: $run_id, generated_at: $generated_at,
+    correlation: {id: $correlation_id, verified: true, sources: ["argus", "phoenix"], incident: $incident[0]},
+    entity: {id: $entity_id},
+    timings: {
+      argus_evidence_publish_ms: $argus_publish_ms,
+      phoenix_recovery_publish_ms: $phoenix_publish_ms,
+      sentinel_correlation_ms: $correlation_ms,
+      total_lifecycle_ms: $lifecycle_ms
+    },
+    recovery: {result: "verified_recovery", availability: "recovery verified; availability percentage not measured"},
+    governance: {approval_required: false, reason: "bounded simulator action"},
+    openai: {configured: $openai_configured, briefing_generated: false},
+    evidence: {provenance: ["replayed", "simulator"], seed: 42, live_chaos: false},
+    interpretation: "Sentinel correlated replayed Argus security evidence with a Phoenix simulator recovery outcome for the same resource. This proves the cross-agent control path; it does not claim live threat latency, live chaos execution, or measured 100% availability."
+  }' >"${run_json}"
+
+bash "${argus_root}/scripts/render-demo-report.sh" "${run_json}" "${run_markdown}"
+cp "${run_json}" "${artifact_dir}/latest-demo.json"
+cp "${run_markdown}" "${artifact_dir}/latest-demo.md"
+
+echo ""
+echo "PLATFORM RESILIENCE PROOF: PASS"
+printf '  Argus evidence published:   %s ms\n' "$((argus_published_ms - demo_started_ms))"
+printf '  Phoenix recovery published: %s ms\n' "$((phoenix_published_ms - argus_published_ms))"
+printf '  Sentinel correlation:       %s ms\n' "$((verified_ms - phoenix_published_ms))"
+printf '  Total verified lifecycle:   %s ms\n' "$((verified_ms - demo_started_ms))"
+echo "  Recovery:                   verified"
+echo "  Availability:               not measured (no false 100% claim)"
+echo "  Human approval:             not required — bounded simulator action"
+echo "  OpenAI briefing:            $([[ "${openai_configured}" == "true" ]] && echo 'configured; not invoked' || echo 'not configured')"
+echo "  Sources:                    Argus + Phoenix"
+echo "  Provenance:                 replayed + simulator (seed 42)"
+echo "  JSON evidence:              ${artifact_dir}/latest-demo.json"
+echo "  Markdown evidence:          ${artifact_dir}/latest-demo.md"
 echo ""
 echo "✅ Full platform demo is ready"
 echo "  Argus:    http://127.0.0.1:5173"

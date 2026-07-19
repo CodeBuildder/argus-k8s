@@ -44,6 +44,60 @@ Work started during the submission period includes:
 | Phase 5 | Real-cluster agent and console lifecycle integration | Issue #101 / PR #102 |
 | Phase 6 | OpenAI-native reasoning, configuration, deployment, UI status, and documentation | Issue #103 / PR #104 |
 | Phase 7 | One-command deterministic Argus, Phoenix, Sentinel, and SOG judge demo | Issue #110 |
+| Phase 8 | Auditable judge evidence scorecard and JSON/Markdown run artifacts | Issue #112 |
+| Phase 9 | Cluster-free full-platform judge demo and explicit live-k3s command | Issue #114 |
+| Phase 10 | Guarded live k3s detection, chaos, recovery, correlation, and measured evidence | Issue #116 |
+| Phase 11 | Judge onboarding doctor, single-path setup, and rehearsal diagnostics | Issue #118 |
+| Phase 12 | Canonical resilience lifecycle and unambiguous evidence provenance | Argus #120 / Sentinel #63 |
+| Final video | Two-minute judge story with frame-by-frame screen, action, narration, timing, and fallback plan | Pending |
+
+### Phase 12 — truthful resilience proof timeline
+
+Every correlated judge incident can now carry the same seven-stage lifecycle: Healthy,
+Fault injected, Detection, Decision, Human approval, Recovery, and Verification. The
+live producer supplies actual timestamps, measured detection/recovery durations, HTTP
+availability, experiment ID, and evidence source. Human approval occurs only after
+observed Argus evidence exists. The portable producer supplies a visually equivalent
+timeline, but every stage is explicitly simulator/replay provenance and availability is
+reported as not measured. Sentinel renders four mutually exclusive labels—Live
+Observed, Synthetic Simulator, Live Chaos Mesh, and Replayed Evidence—and never infers
+missing proof stages.
+
+### Phase 11 — judge onboarding and rehearsal doctor
+
+`make doctor` and `make doctor-live` are read-only entry points for the portable and live
+proofs. They validate the sibling repository layout, required tools, secret-safe OpenAI
+configuration status, runtime availability, local console dependencies, and—only in
+live mode—the complete k3s stack. Each run ends with an unambiguous verdict and exact
+next command. `setup.md`, the root README, and Make help now present the same choose-one
+path and distinguish replay/simulator claims from observed/live-chaos measurements.
+
+### Phase 10 — observed live-cluster proof
+
+`make demo-platform-live-dry-run` validates the actual k3s security, chaos, agent, and
+SOG stack without changing it. `make demo-platform-live` then requires two explicit
+human confirmations, creates an isolated two-replica service, waits for observed Argus
+evidence, asks Phoenix to create one real Chaos Mesh PodChaos, continuously measures
+HTTP availability, verifies Kubernetes replacement and full readiness, and publishes
+only the verified cross-agent lifecycle to Sentinel. The resulting JSON/Markdown
+scorecard distinguishes observed/live-chaos provenance from the portable simulator.
+
+### Phase 9 — portable judge demo
+
+`make demo-platform` now defaults to the cluster-free path: a disposable local SOG,
+real local product services, an explicitly synthetic three-node topology, deterministic
+Argus and Phoenix lifecycles, and a bounded dynamic feed. `make demo-platform-live`
+preserves the k3s-backed integration proof. The split prevents “safe” from being confused
+with “cluster-free” and keeps simulated evidence visually useful without mislabeling it
+as live production telemetry.
+
+### Phase 8 — judge evidence report
+
+Every successful deterministic platform run now emits a concise PASS scorecard and
+stores the verified lifecycle as JSON and Markdown. The report preserves correlation,
+sources, provenance, seed, governance, OpenAI configuration, recovery state, and measured
+orchestration timings. It explicitly avoids claiming live detection latency or 100%
+availability from replayed and simulated evidence.
 
 ### Phase 7 — deterministic platform demo
 
