@@ -57,7 +57,7 @@ Work started during the submission period includes:
 ### Phase 16 — judge video and submission kit
 
 `SUBMISSION_KIT.md` is the single rehearsal and submission source. It provides a timed
-1:55 recording plan with the exact screen, action, and narration for every shot; truthful
+1:59 recording plan with the exact screen, action, and narration for every shot; truthful
 portable-versus-live claim boundaries; recording fallbacks; a screenshot list; copy-ready
 Devpost sections; and a final quality gate. The story makes OpenAI reasoning, the SOG,
 verified recovery, evidence provenance, and human governance explicit without requiring

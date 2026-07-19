@@ -40,9 +40,9 @@ For every shot below:
 
 Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
-## The 1:55 recording script
+## The 1:59 recording script
 
-### Shot 1 — The problem · `0:00–0:08`
+### Shot 1 — The problem · `0:00–0:09`
 
 **SHOW:** Sentinel home page, with the headline and Live Risk card visible.
 
@@ -50,14 +50,14 @@ Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
 **SAY:**
 
-> Production systems fail in two ways: attacks compromise them, and infrastructure
-> breaks beneath them. Today those signals live in separate tools.
+> Systems fail in two ways: attackers break in, or infrastructure breaks down. The
+> problem is, those signals usually live in separate tools.
 
 **END ON:** The unchanged Sentinel home page.
 
 ---
 
-### Shot 2 — Connect the platform · `0:08–0:20`
+### Shot 2 — Connect the platform · `0:09–0:22`
 
 **SHOW:** The Sentinel **How it works** overlay.
 
@@ -68,15 +68,15 @@ Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
 **SAY:**
 
-> Sentinel closes that gap. Argus turns runtime security telemetry into evidence. The
-> Sentinel Operations Graph connects it to affected services. Sentinel uses OpenAI to
-> explain and prioritize the decision.
+> That’s where Sentinel comes in. Argus turns runtime activity into security evidence.
+> The SOG connects it to affected services, and Sentinel uses OpenAI to explain what
+> matters next.
 
 **END ON:** The cursor resting over **Sentinel + OpenAI**.
 
 ---
 
-### Shot 3 — Explain control · `0:20–0:29`
+### Shot 3 — Explain control · `0:22–0:32`
 
 **SHOW:** Keep the same **How it works** overlay open.
 
@@ -87,14 +87,14 @@ move to **Phoenix** for the final sentence.
 
 **SAY:**
 
-> Safe, proven recovery can run autonomously. High-impact action waits for a human.
-> Phoenix then restores the service and verifies the result.
+> Proven, low-risk recovery can happen automatically. Risky actions wait for a person.
+> Phoenix handles the recovery, then checks that it actually worked.
 
 **END ON:** The cursor resting over **Phoenix**.
 
 ---
 
-### Shot 4 — Show Argus evidence · `0:29–0:42`
+### Shot 4 — Show Argus evidence · `0:32–0:45`
 
 **SHOW:** Argus threat detail for the highest-severity seeded threat.
 
@@ -106,15 +106,14 @@ response. Do not scroll rapidly.
 
 **SAY:**
 
-> Here Argus detected suspicious workload behavior, preserved the original evidence,
-> mapped the blast radius, and produced an evidence-grounded response—not just another
-> alert.
+> Here, Argus caught suspicious behavior inside this workload. It kept the evidence,
+> mapped what else could be affected, and recommended a response—not just another alert.
 
 **END ON:** The recommended response and evidence visible together.
 
 ---
 
-### Shot 5 — Show Phoenix verification · `0:42–0:55`
+### Shot 5 — Show Phoenix verification · `0:45–0:58`
 
 **SHOW:** Phoenix completed resilience scenario or agent run matching the demo resource.
 
@@ -125,14 +124,14 @@ make its provenance, recovery action, and verified result visible.
 
 **SAY:**
 
-> Phoenix exercises the affected service, classifies the failure, executes a bounded
-> recovery, and records whether health was actually restored.
+> Phoenix tests what happens when the service fails. It diagnoses the problem, runs a
+> controlled recovery, and checks that the service is healthy again.
 
 **END ON:** The completed and verified recovery result.
 
 ---
 
-### Shot 6 — Show the shared SOG · `0:55–1:10`
+### Shot 6 — Show the shared SOG · `0:58–1:12`
 
 **SHOW:** Sentinel home page with both specialist-agent cards and the central SOG card.
 
@@ -144,15 +143,14 @@ by pointing to the entity and relationship counts.
 
 **SAY:**
 
-> Sentinel combines both specialist agents inside the SOG. This is live application
-> state: connected entities, relationships, evidence, and correlated incidents refresh
-> continuously.
+> Back in Sentinel, Argus and Phoenix report into the same graph. The services,
+> relationships, evidence, and incidents keep updating as the demo runs.
 
 **END ON:** The complete three-card Argus → SOG → Phoenix view.
 
 ---
 
-### Shot 7 — Prove the lifecycle · `1:10–1:28`
+### Shot 7 — Prove the lifecycle · `1:12–1:30`
 
 **SHOW:** Sentinel at <http://127.0.0.1:5175>. Close **How it works**, then look directly
 below the large headline section. In the row of five number cards, click the far-right
@@ -169,16 +167,16 @@ when you say “why the system acted.”
 
 **SAY:**
 
-> One incident explains the full resilience lifecycle. Every stage carries its
-> timestamp, evidence source, and outcome, so an operator can audit exactly why the
-> system acted.
+> This is my favorite part. One incident shows the whole story—from a healthy service to
+> the fault, detection, recovery, and verification. Every step shows what happened and
+> where its evidence came from.
 
 **END ON:** Keep the right-hand panel open with **Verification** visible, including its
 result and evidence source.
 
 ---
 
-### Shot 8 — Prove honesty and explainability · `1:28–1:40`
+### Shot 8 — Prove honesty and explainability · `1:30–1:42`
 
 **SHOW:** The incident provenance label, followed by the Live Risk explanation popup.
 
@@ -189,15 +187,14 @@ close the incident, click **Live Risk**, and reveal its supporting score evidenc
 
 **SAY:**
 
-> The product never disguises demo data. Replay, simulator, live observation, and live
-> Chaos Mesh are visibly distinct. Fleet risk is explainable down to its supporting
-> records.
+> We’re clear about what’s real and what’s simulated. Every record says where it came
+> from, and every risk score opens into the evidence behind it.
 
 **END ON:** The Live Risk score breakdown and supporting records.
 
 ---
 
-### Shot 9 — Show the proof artifact · `1:40–1:50`
+### Shot 9 — Show the proof artifact · `1:42–1:53`
 
 **SHOW:** Prefer `artifacts/demo-platform/latest-live-demo.md`. If no live artifact is
 available, show `artifacts/demo-platform/latest-demo.md` and keep its simulator/replay
@@ -211,14 +208,14 @@ availability measurement.
 
 **SAY:**
 
-> The repeatable demo verifies cross-agent correlation. Our guarded k3s proof separately
-> measures real Chaos Mesh recovery and HTTP availability.
+> This local demo proves the three agents work together. Our guarded k3s mode goes
+> further: it runs a real Chaos Mesh fault and measures recovery and availability.
 
 **END ON:** The evidence scorecard with provenance visible.
 
 ---
 
-### Shot 10 — Close · `1:50–1:55`
+### Shot 10 — Close · `1:53–1:59`
 
 **SHOW:** Sentinel home page and its main headline.
 
@@ -227,12 +224,13 @@ empty space.
 
 **SAY:**
 
-> Sentinel is autonomous resilience through AI—with humans governing high-risk actions.
+> That’s Sentinel: AI-powered resilience that acts autonomously, while people stay in
+> control when the stakes are high.
 
 **END ON:** Hold the Sentinel headline silently for one full second, then fade to black.
 
-The voice-over contains 215 words. At a calm pace, it leaves enough time for the screen
-actions and short pauses while keeping the final cut below two minutes.
+The voice-over contains 245 words. The shot timings are paced for conversational delivery
+and keep the final cut one second below two minutes.
 
 ## Truthful on-screen claims
 
