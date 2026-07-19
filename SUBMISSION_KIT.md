@@ -1,6 +1,7 @@
 # Sentinel Platform — Judge Submission Kit
 
-> **Core message:** Autonomous resilience through AI—with humans governing high-risk actions.
+> **Core message:** Detect early. Break safely. Recover before customers feel it—with
+> humans governing high-risk actions.
 
 This is the single recording and submission guide. Run commands from `argus-k8s/`.
 The primary video uses the portable demo so the recording is deterministic. A short,
@@ -50,8 +51,8 @@ Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
 **SAY:**
 
-> Systems fail in two ways: attackers break in, or infrastructure breaks down. The
-> problem is, those signals usually live in separate tools.
+> Most platforms wait for an alert or outage. Sentinel doesn’t. It looks for threats and
+> failures before customers have to find them.
 
 **END ON:** The unchanged Sentinel home page.
 
@@ -68,9 +69,8 @@ Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
 **SAY:**
 
-> That’s where Sentinel comes in. Argus turns runtime activity into security evidence.
-> The SOG connects it to affected services, and Sentinel uses OpenAI to explain what
-> matters next.
+> Argus watches admission, the kernel, runtime, and network using Kyverno, eBPF, Falco,
+> and Cilium—catching suspicious behavior close to where it starts.
 
 **END ON:** The cursor resting over **Sentinel + OpenAI**.
 
@@ -87,8 +87,8 @@ move to **Phoenix** for the final sentence.
 
 **SAY:**
 
-> Proven, low-risk recovery can happen automatically. Risky actions wait for a person.
-> Phoenix handles the recovery, then checks that it actually worked.
+> Phoenix deliberately tests failures before real outages happen. Safe fixes run
+> automatically; risky actions wait for a person. Every recovery has to prove it worked.
 
 **END ON:** The cursor resting over **Phoenix**.
 
@@ -106,8 +106,8 @@ response. Do not scroll rapidly.
 
 **SAY:**
 
-> Here, Argus caught suspicious behavior inside this workload. It kept the evidence,
-> mapped what else could be affected, and recommended a response—not just another alert.
+> Here, Argus caught suspicious runtime behavior near the kernel and enforcement path.
+> It can contain the workload early, preserve evidence, and stop a larger incident.
 
 **END ON:** The recommended response and evidence visible together.
 
@@ -124,8 +124,8 @@ make its provenance, recovery action, and verified result visible.
 
 **SAY:**
 
-> Phoenix tests what happens when the service fails. It diagnoses the problem, runs a
-> controlled recovery, and checks that the service is healthy again.
+> Phoenix doesn’t wait for an outage report. It injects a bounded fault, diagnoses the
+> weakness, recovers the service, and verifies its health.
 
 **END ON:** The completed and verified recovery result.
 
@@ -143,8 +143,8 @@ by pointing to the entity and relationship counts.
 
 **SAY:**
 
-> Back in Sentinel, Argus and Phoenix report into the same graph. The services,
-> relationships, evidence, and incidents keep updating as the demo runs.
+> Sentinel connects both sides. It knows what Argus stopped, what Phoenix tested, which
+> services depend on each other, and—using OpenAI—what actually needs our attention.
 
 **END ON:** The complete three-card Argus → SOG → Phoenix view.
 
@@ -167,9 +167,8 @@ when you say “why the system acted.”
 
 **SAY:**
 
-> This is my favorite part. One incident shows the whole story—from a healthy service to
-> the fault, detection, recovery, and verification. Every step shows what happened and
-> where its evidence came from.
+> One incident shows the whole loop: healthy, fault, detection, decision, recovery, and
+> verification. We don’t call it fixed until the final health check passes.
 
 **END ON:** Keep the right-hand panel open with **Verification** visible, including its
 result and evidence source.
@@ -187,8 +186,8 @@ close the incident, click **Live Risk**, and reveal its supporting score evidenc
 
 **SAY:**
 
-> We’re clear about what’s real and what’s simulated. Every record says where it came
-> from, and every risk score opens into the evidence behind it.
+> We’re also clear about what’s real and what’s simulated. Every record shows its source,
+> and every risk score opens into the evidence behind it.
 
 **END ON:** The Live Risk score breakdown and supporting records.
 
@@ -208,8 +207,8 @@ availability measurement.
 
 **SAY:**
 
-> This local demo proves the three agents work together. Our guarded k3s mode goes
-> further: it runs a real Chaos Mesh fault and measures recovery and availability.
+> This local demo makes that loop repeatable. Our guarded k3s mode goes further: real
+> runtime detection, a real Chaos Mesh fault, and measured recovery and availability.
 
 **END ON:** The evidence scorecard with provenance visible.
 
@@ -224,12 +223,11 @@ empty space.
 
 **SAY:**
 
-> That’s Sentinel: AI-powered resilience that acts autonomously, while people stay in
-> control when the stakes are high.
+> Find it early, fix it safely, verify the outcome, and keep people in control.
 
 **END ON:** Hold the Sentinel headline silently for one full second, then fade to black.
 
-The voice-over contains 245 words. The shot timings are paced for conversational delivery
+The voice-over contains 227 words. The shot timings are paced for conversational delivery
 and keep the final cut one second below two minutes.
 
 ## Truthful on-screen claims
@@ -274,23 +272,26 @@ technical proof image.
 
 ### One-line pitch
 
-Sentinel coordinates AI-native security and resilience agents to detect threats, recover
-services, verify outcomes, and keep humans in control of high-risk actions.
+Sentinel continuously finds threats and resilience weaknesses close to their source,
+contains or recovers them before impact spreads, verifies the outcome, and keeps humans
+in control of high-risk actions.
 
 ### Inspiration
 
-Security tools can identify an attack while reliability tools independently detect an
-outage, but operators still have to reconstruct what happened and decide whether an
-automated response is safe. We wanted one accountable evidence loop that understands
-both compromise and failure.
+Most security and reliability products begin after something has already gone wrong.
+Security tools report an attack, reliability tools report an outage, and operators still
+have to reconstruct the connection. We wanted a proactive evidence loop that continuously
+searches for both compromise and failure, acts close to the source, and proves the result.
 
 ### What it does
 
-Argus converts Falco, Cilium, Kyverno, and Kubernetes telemetry into reasoned security
-evidence. Phoenix continuously tests resilience, diagnoses faults, performs bounded
-recovery, and verifies service health. Sentinel connects both through the Sentinel
-Operations Graph (SOG), uses OpenAI to explain fleet posture and prioritize decisions,
-and routes consequential actions through explicit human approval.
+Argus uses Kyverno admission controls, eBPF and Falco runtime visibility, and Cilium
+network enforcement to detect and contain suspicious behavior before it spreads through
+the application. Phoenix continuously injects bounded failures so weaknesses are found
+before customers encounter them, then diagnoses, recovers, and verifies service health.
+Sentinel connects both through the Sentinel Operations Graph (SOG), uses OpenAI to
+explain fleet posture and prioritize decisions, and routes consequential actions through
+explicit human approval.
 
 ### How we built it
 
