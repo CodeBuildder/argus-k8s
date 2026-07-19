@@ -196,7 +196,7 @@ machine-specific, continuously changing demo output.
 | Console | URL | What to show |
 |---|---|---|
 | Argus | **http://127.0.0.1:5173** | Security evidence and response |
-| Phoenix | **http://127.0.0.1:5174** | Resilience outcome and recovery |
+| Phoenix | **http://127.0.0.1:5174** | Error analysis, root cause, blast radius, recovery, and verification |
 | Sentinel | **http://127.0.0.1:5175** | Unified correlated incident and fleet decision |
 
 Sentinel opens with a read-only **Presentation Preflight** panel. It verifies Argus,

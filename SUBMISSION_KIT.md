@@ -88,9 +88,10 @@ move to **Phoenix** for the final sentence.
 
 **SAY:**
 
-> Phoenix adds the resilience layer. It deliberately finds failures before a real outage,
-> repairs them, and proves recovery. Safe fixes run automatically; risky actions wait
-> for a person.
+> Phoenix adds the resilience layer. It exposes failures before a real outage, analyzes
+> the errors, and reconstructs the root-cause chain from metrics, logs, dependencies,
+> and prior incidents. Then it chooses a recovery and proves it worked. Safe fixes run
+> automatically; risky actions wait for a person.
 
 **END ON:** The cursor resting over **Phoenix**.
 
@@ -115,19 +116,23 @@ response. Do not scroll rapidly.
 
 ---
 
-### Shot 5 — Show Phoenix verification · `0:52–1:05`
+### Shot 5 — Show Phoenix RCA and verification · `0:52–1:05`
 
-**SHOW:** Phoenix completed resilience scenario or agent run matching the demo resource.
+**SHOW:** Phoenix completed agent run matching the demo resource, with its diagnosis and
+verified recovery visible.
 
-**DO BEFORE SPEAKING:** Switch to the prepared Phoenix tab. Open a completed run and
-make its provenance, recovery action, and verified result visible.
+**DO BEFORE SPEAKING:** Switch to the prepared Phoenix tab. Open a completed agent run
+and make its error evidence, causal chain/root cause, selected recovery action,
+provenance, and verified result visible.
 
-**DO WHILE SPEAKING:** Point to the recovery result only when saying “verified.”
+**DO WHILE SPEAKING:** Point first to the root-cause diagnosis, then to the selected
+recovery, and point to the final result only when saying “verified.”
 
 **SAY:**
 
-> Phoenix doesn’t wait for an outage report. It injects a bounded fault, diagnoses the
-> weakness, recovers the service, and verifies its health.
+> Phoenix doesn’t just inject faults. It analyzes the resulting errors, uses OpenAI to
+> reconstruct why the failure happened and what it could affect, then selects a bounded
+> recovery and verifies the service is actually healthy.
 
 **END ON:** The completed and verified recovery result.
 
@@ -309,7 +314,8 @@ Capture clean 16:9 images with no browser chrome where possible:
 - Sentinel hero with **SOG LIVE**, live risk, and both specialist agents reporting
 - **How it works** five-stage system story
 - Argus threat detail with evidence and recommended response
-- Phoenix completed recovery with provenance and verification
+- Phoenix root-cause analysis with causal chain, recovery decision, provenance, and
+  verification
 - Sentinel correlated incident with the seven-stage proof timeline
 - Sentinel score explanation with supporting evidence
 - Presentation preflight showing **Ready to present**
@@ -338,7 +344,10 @@ searches for both compromise and failure, acts close to the source, and proves t
 Argus uses Kyverno admission controls, eBPF and Falco runtime visibility, and Cilium
 network enforcement to detect and contain suspicious behavior before it spreads through
 the application. Phoenix continuously injects bounded failures so weaknesses are found
-before customers encounter them, then diagnoses, recovers, and verifies service health.
+before customers encounter them. It performs error analysis across metrics, logs, the
+dependency graph, blast radius, and prior incidents; uses OpenAI to reconstruct a
+structured root-cause chain; selects a risk-scored remediation; and verifies service
+health after execution.
 Sentinel connects both through the Sentinel Operations Graph (SOG), uses OpenAI to
 explain fleet posture and prioritize decisions, and routes consequential actions through
 explicit human approval.
@@ -354,10 +363,12 @@ path uses Cilium, Falco, Kyverno, Chaos Mesh, and continuous HTTP probes.
 
 ### How OpenAI is used
 
-OpenAI reasoning turns structured operational evidence into concise incident assessment,
-risk explanation, threat-hunting assistance, and operator briefings. The model advises
-inside an evidence-bounded workflow; deterministic policy and human approval remain the
-control plane for high-impact action.
+OpenAI reasoning powers two evidence-bounded workflows. Phoenix uses it for error
+analysis and root-cause reconstruction, producing a causal chain, affected blast radius,
+risk level, and concrete recovery recommendation from observed telemetry and operational
+history. Sentinel uses it for cross-agent incident assessment, risk explanation,
+threat-hunting assistance, and operator briefings. Deterministic policy and human
+approval remain the control plane for high-impact action.
 
 ### How Codex accelerated the build
 
@@ -372,10 +383,12 @@ workflow for every phase, while making the product and safety decisions explicit
 
 Most platforms observe from one layer and react after impact. Sentinel coordinates a
 layered protection model: Kyverno at admission, eBPF and Falco at kernel/runtime, Cilium
-at L3/L4/L7 network enforcement, and Phoenix at service resilience. A threat or weakness
-can be handled by the earliest capable layer, while the SOG preserves one explanation
-and governance trail. Sentinel never claims recovery merely because an action was
-dispatched; the loop closes only after verification.
+at L3/L4/L7 network enforcement, and Phoenix at service resilience. Phoenix goes beyond
+generic chaos testing: it turns the resulting errors into a root-cause chain, calculates
+the blast radius, chooses a risk-aware recovery, and verifies the outcome. A threat or
+weakness can be handled by the earliest capable layer, while the SOG preserves one
+explanation and governance trail. Sentinel never claims recovery merely because an
+action was dispatched; the loop closes only after verification.
 
 ### Challenges
 

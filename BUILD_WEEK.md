@@ -8,7 +8,8 @@ added during the OpenAI Build Week submission period, which began July 13, 2026.
 Before Build Week, the project already included:
 
 - Argus runtime detection, enrichment, reasoning, remediation, and command console
-- Phoenix chaos injection, failure diagnosis, self-healing agent, and dashboard
+- Phoenix chaos injection, error analysis, root-cause reconstruction, blast-radius
+  reasoning, self-healing agent, and verified-recovery dashboard
 - Sentinel repository scaffolding for the primary multi-agent supervisor
 - Sentinel Platform schemas, adapters, and Sentinel Operations Graph (SOG) service
 
