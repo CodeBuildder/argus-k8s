@@ -52,16 +52,17 @@ Work started during the submission period includes:
 | Phase 13 | Persistent Phoenix scenarios, approvals, agent runs, and restart history | Phoenix #73 |
 | Phase 14 | Judge-facing read-only platform readiness panel | Argus #122 / Sentinel #65 |
 | Phase 15 | Unified 30-second judge-facing system explanation | Sentinel #67 |
-| Phase 16 | Two-minute judge story, recording safeguards, screenshots, and Devpost submission kit | Issue #124 |
+| Phase 16 | Under-three-minute judge story, recording safeguards, screenshots, and Devpost submission kit | Issue #124 |
 
 ### Phase 16 — judge video and submission kit
 
 `SUBMISSION_KIT.md` is the single rehearsal and submission source. It provides a timed
-1:59 recording plan with the exact screen, action, and narration for every shot; truthful
+2:50 recording plan with the exact screen, action, and narration for every shot; truthful
 portable-versus-live claim boundaries; recording fallbacks; a screenshot list; copy-ready
-Devpost sections; and a final quality gate. The story makes OpenAI reasoning, the SOG,
-verified recovery, evidence provenance, and human governance explicit without requiring
-the presenter to improvise.
+Devpost sections; and a final quality gate. The story explicitly covers what was built,
+how Codex accelerated the multi-repository engineering workflow, how GPT-5.6 operates
+inside the product, OpenAI reasoning, the SOG, verified recovery, evidence provenance,
+and human governance without requiring the presenter to improvise.
 
 ### Phase 15 — 30-second system explanation
 

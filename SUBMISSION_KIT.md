@@ -41,7 +41,7 @@ For every shot below:
 
 Do not read the **SHOW**, **DO**, or **END ON** instructions aloud.
 
-## The 1:59 recording script
+## The 2:50 recording script
 
 ### Shot 1 — The problem · `0:00–0:09`
 
@@ -193,7 +193,53 @@ close the incident, click **Live Risk**, and reveal its supporting score evidenc
 
 ---
 
-### Shot 9 — Show the proof artifact · `1:42–1:53`
+### Shot 9 — Show GPT-5.6 working · `1:42–2:02`
+
+**SHOW:** Sentinel's **OpenAI Evidence Briefing** panel with a completed briefing already
+visible. Generate it before recording; do not wait for the API on camera.
+
+**DO BEFORE SPEAKING:** Frame both the **OpenAI Evidence Briefing** heading and the
+generated posture explanation. Keep at least one evidence-backed recommendation visible.
+
+**DO WHILE SPEAKING:** Point to the current-posture summary, then its recommended next
+action. Do not scroll faster than the viewer can read.
+
+**SAY:**
+
+> GPT-5.6 works inside the product, not just behind the demo. It turns current SOG
+> evidence into incident assessments, risk explanations, threat-hunting help, and clear
+> operator briefings like this one. The model explains the decision, while policy and
+> human approval still control high-impact action.
+
+**END ON:** The evidence-backed recommendation in the OpenAI briefing.
+
+---
+
+### Shot 10 — Explain how Codex built it · `2:02–2:25`
+
+**SHOW:** The repository in your IDE. Put `BUILD_WEEK.md` on the left and the Git commit
+history or pull-request list on the right. Make Phases 7–16 visible.
+
+**DO BEFORE SPEAKING:** Prepare this view before recording. Do not show `.env`, API keys,
+private chat content, or unrelated repositories.
+
+**DO WHILE SPEAKING:** Point to the deterministic platform demo, live k3s proof,
+provenance timeline, persistence, readiness panel, and submission phase as you describe
+the workflow.
+
+**SAY:**
+
+> I used Codex as my engineering partner across all three repositories. We turned three
+> separate agents into one repeatable platform demo, designed the shared evidence
+> contracts, added guarded k3s automation, built the lifecycle and provenance UI, and
+> wrote the tests and setup path. Every phase is tracked through an issue, commit, and
+> reviewable pull request.
+
+**END ON:** `BUILD_WEEK.md` with the completed phase record and commit history both visible.
+
+---
+
+### Shot 11 — Show the proof artifact · `2:25–2:43`
 
 **SHOW:** Prefer `artifacts/demo-platform/latest-live-demo.md`. If no live artifact is
 available, show `artifacts/demo-platform/latest-demo.md` and keep its simulator/replay
@@ -214,7 +260,7 @@ availability measurement.
 
 ---
 
-### Shot 10 — Close · `1:53–1:59`
+### Shot 12 — Close · `2:43–2:50`
 
 **SHOW:** Sentinel home page and its main headline.
 
@@ -227,8 +273,8 @@ empty space.
 
 **END ON:** Hold the Sentinel headline silently for one full second, then fade to black.
 
-The voice-over contains 227 words. The shot timings are paced for conversational delivery
-and keep the final cut one second below two minutes.
+The voice-over is paced for conversational delivery and targets 2:50. The official limit
+is under three minutes, leaving ten seconds of export and upload safety margin.
 
 ## Truthful on-screen claims
 
@@ -309,6 +355,15 @@ risk explanation, threat-hunting assistance, and operator briefings. The model a
 inside an evidence-bounded workflow; deterministic policy and human approval remain the
 control plane for high-impact action.
 
+### How Codex accelerated the build
+
+Codex served as an engineering partner across the Argus, Phoenix, Sentinel, and SOG
+repositories. It helped turn separate agents into one deterministic demo, design and
+implement the shared evidence contracts, build guarded k3s and Chaos Mesh workflows,
+add persistence and presentation preflight, iterate on the dashboards, and create tests
+and single-path documentation. We used an issue → branch → test → commit → pull-request
+workflow for every phase, while making the product and safety decisions explicitly.
+
 ### What makes it different
 
 Sentinel does not stop at detection or claim recovery because an action was dispatched.
@@ -346,6 +401,9 @@ the platform in multi-cluster environments.
 - [ ] No secrets, usernames, notifications, or unrelated tabs are visible
 - [ ] Every spoken metric is visible on screen
 - [ ] Portable and live provenance are never mixed
-- [ ] Final cut is under two minutes and legible at 1080p
+- [ ] Video explicitly explains what was built, how Codex accelerated it, and how GPT-5.6 works inside it
+- [ ] Final cut is under three minutes—target 2:50—and legible at 1080p
 - [ ] Video audio is clear at normal laptop volume
+- [ ] Run `/feedback` in the primary Codex build thread and save the required Session ID
+- [ ] Upload the final video publicly to YouTube and verify it plays while signed out
 - [ ] Devpost cover, screenshots, repository link, and setup path are included
