@@ -54,7 +54,8 @@ cross-agent judge experience.
 |---|---|---|
 | **Local synthetic** | You want the fastest judge/reviewer experience and do not have Kubernetes | `make demo-local` |
 | **Live k3s** | You have the three-node Argus cluster and want real Falco, Cilium, and Kyverno evidence | `make demo-cluster-dry-run`, then `make demo-cluster` |
-| **Full platform** | You want Argus, Phoenix, Sentinel, and the SOG operating as one deterministic demo | `make demo-platform-dry-run`, then `make demo-platform` |
+| **Full platform, cluster-free** | Recommended judge path: all three products, realistic synthetic topology, no Kubernetes | `make demo-platform-dry-run`, then `make demo-platform` |
+| **Full platform, live k3s** | Maintainer/video path: observed evidence, approved live chaos, measured recovery | `make doctor-live`, then `make demo-platform-live` |
 
 ### Path A — local synthetic, no cluster required
 
@@ -132,19 +133,19 @@ injects the real workloads, prints terminal evidence, and keeps the console avai
 at **http://127.0.0.1:5173** until `Ctrl-C`. Cleanup stops both local processes and
 deletes only the namespace created by that run.
 
-### Path C — full deterministic platform demo
+### Path C — full cluster-free platform demo (recommended)
 
-Use this path for the complete judge story. It requires sibling Phoenix and Sentinel
-checkouts plus the deployed `sentinel-platform` and `phoenix-system` services in the
-selected Kubernetes context. Validate everything without starting processes, opening
-port-forwards, or publishing evidence:
+Use this path for the complete judge story. It requires sibling Phoenix, Sentinel, and
+Sentinel Platform checkouts plus Docker or OrbStack for one disposable Redis container.
+It does **not** require Kubernetes, kubectl, k3s, Cilium, Falco, or Chaos Mesh.
 
 ```text
 Projects/
 ├── argus-k8s/                 # run the command here
 └── sentinel-stack/
     ├── phoenix/
-    └── sentinel/
+    ├── sentinel/
+    └── sentinel-platform/
 ```
 
 Install each repository's local dependencies once:
@@ -155,11 +156,10 @@ make -C ../sentinel-stack/sentinel setup-local
 npm --prefix ../sentinel-stack/phoenix/dashboard install
 ```
 
-Select the real three-node k3s context, then run the non-mutating preflight:
+Run the non-mutating preflight:
 
 ```bash
-kubectl config use-context argus
-make demo-platform-dry-run
+make doctor
 ```
 
 Then launch the complete experience:
@@ -168,10 +168,12 @@ Then launch the complete experience:
 make demo-platform
 ```
 
-The command starts or reuses all required APIs, port-forwards, and dashboards; publishes
-one deterministic Argus security finding and one Phoenix recovery outcome against the
-same resource; and refuses to report success until Sentinel exposes their correlated
-incident with explicit `replayed` and `simulator` provenance.
+The command installs missing local dependencies, starts a disposable Redis-backed real
+SOG and the real local Argus, Phoenix, and Sentinel services, then seeds a three-node,
+multi-namespace service graph. It populates Argus with twelve threats, Phoenix with a
+synthetic dependency graph, and Sentinel with multiple correlated lifecycles. A bounded
+feed adds a new replay/simulator lifecycle every 20 seconds so refresh timestamps,
+counters, timelines, and risk views visibly move during the demo.
 
 Every successful run prints a judge-readable PASS scorecard and writes the exact proof
 to `artifacts/demo-platform/latest-demo.json` and
@@ -187,15 +189,34 @@ claim.
 | Phoenix | **http://127.0.0.1:5174** | Resilience outcome and recovery |
 | Sentinel | **http://127.0.0.1:5175** | Unified correlated incident and fleet decision |
 
-Existing healthy services are reused. On `Ctrl-C`, the command stops only processes it
-started. The default sibling paths are `../sentinel-stack/phoenix` and
-`../sentinel-stack/sentinel`; override them with `PHOENIX_ROOT` and `SENTINEL_ROOT` when
-your checkouts live elsewhere. This deterministic path does not inject live Chaos Mesh
-faults; the existing live k3s path remains available for real runtime security evidence.
-Sentinel readiness is checked through the dashboard's `/api/health` proxy, not merely
-its HTML homepage. If port `5175` contains a stale Vite process from the configured
-Sentinel checkout, the command safely restarts it; listeners from any other directory
-are never terminated automatically.
+Every synthetic entity has `demo-data=synthetic`; evidence is explicitly labeled
+`replayed` or `simulator`. The local demo never claims live Falco detection, live chaos,
+or measured production availability. On `Ctrl-C`, it stops its local processes and
+removes its disposable Redis container. It replaces only known project listeners and
+kubectl port-forwards on reserved demo ports; unrelated listeners cause a safe failure.
+The Sentinel incident drawer uses the same seven-stage resilience timeline as the live
+proof, while labeling every portable stage as replayed or simulated and leaving
+availability explicitly unmeasured.
+
+### Path D — live k3s-backed platform proof
+
+Run the guarded real-cluster proof separately:
+
+```bash
+kubectl config use-context argus
+make doctor-live
+make demo-platform-live
+```
+
+The dry-run is read-only. The real command verifies Cilium, Falco, Kyverno, Argus,
+Phoenix, Chaos Mesh, and the SOG; asks for the exact Kubernetes context and the phrase
+`INJECT LIVE FAULT`; creates only `sentinel-live-demo`; and launches a two-replica HTTP
+service. Argus must observe a bounded Falco-triggering workload before Phoenix creates a
+real Chaos Mesh `PodChaos` against one disposable replica. The proof passes only after a
+new replacement pod is Ready, both replicas are Ready, continuous HTTP availability is
+measured, and Sentinel exposes the correlated Argus + Phoenix incident. `Ctrl-C` stops
+the consoles and deletes only the isolated demo namespace. Evidence is written to
+`artifacts/demo-platform/latest-live-demo.{json,md}`.
 
 ## Part of the Sentinel multi-agent platform
 
