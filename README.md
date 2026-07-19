@@ -197,7 +197,7 @@ kubectl port-forwards on reserved demo ports; unrelated listeners cause a safe f
 
 ### Path D — live k3s-backed platform proof
 
-Maintainers can run the original real-cluster integration path separately:
+Run the guarded real-cluster proof separately:
 
 ```bash
 kubectl config use-context argus
@@ -205,10 +205,15 @@ make demo-platform-live-dry-run
 make demo-platform-live
 ```
 
-This path uses the deployed SOG and Phoenix services in the actual three-node k3s
-cluster. Its injected Argus/Phoenix proof remains deterministic and safe. Use
-`make demo-cluster` separately for real bounded Falco-producing threat workloads; a
-future guarded live-chaos path must continue to require explicit typed approval.
+The dry-run is read-only. The real command verifies Cilium, Falco, Kyverno, Argus,
+Phoenix, Chaos Mesh, and the SOG; asks for the exact Kubernetes context and the phrase
+`INJECT LIVE FAULT`; creates only `sentinel-live-demo`; and launches a two-replica HTTP
+service. Argus must observe a bounded Falco-triggering workload before Phoenix creates a
+real Chaos Mesh `PodChaos` against one disposable replica. The proof passes only after a
+new replacement pod is Ready, both replicas are Ready, continuous HTTP availability is
+measured, and Sentinel exposes the correlated Argus + Phoenix incident. `Ctrl-C` stops
+the consoles and deletes only the isolated demo namespace. Evidence is written to
+`artifacts/demo-platform/latest-live-demo.{json,md}`.
 
 ## Part of the Sentinel multi-agent platform
 

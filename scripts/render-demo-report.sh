@@ -9,7 +9,8 @@ jq -e '
   .verdict == "PASS" and
   .correlation.verified == true and
   .correlation.sources == ["argus", "phoenix"] and
-  .evidence.provenance == ["replayed", "simulator"] and
+  (.evidence.provenance == ["replayed", "simulator"] or
+   .evidence.provenance == ["live_chaos", "observed"]) and
   .recovery.result == "verified_recovery"
 ' "${report_json}" >/dev/null
 
@@ -18,12 +19,12 @@ jq -r '
   "**Run:** `\(.run_id)`  ",
   "**Correlation:** `\(.correlation.id)`  ",
   "**Generated:** \(.generated_at)  ",
-  "**Mode:** deterministic replay + simulator (no live Chaos Mesh)\n",
+  "**Mode:** \(if .evidence.live_chaos then "observed security evidence + live Chaos Mesh" else "deterministic replay + simulator (no live Chaos Mesh)" end)\n",
   "## Evidence scorecard\n",
   "| Measurement | Result |",
   "|---|---|",
-  "| Argus evidence published | \(.timings.argus_evidence_publish_ms) ms |",
-  "| Phoenix recovery published | \(.timings.phoenix_recovery_publish_ms) ms |",
+  "| \(if .evidence.live_chaos then "Argus observed-detection wait" else "Argus evidence published" end) | \(if .evidence.live_chaos then .timings.argus_detection_ms else .timings.argus_evidence_publish_ms end) ms |",
+  "| \(if .evidence.live_chaos then "Phoenix verified recovery" else "Phoenix recovery published" end) | \(if .evidence.live_chaos then .timings.recovery_ms else .timings.phoenix_recovery_publish_ms end) ms |",
   "| Sentinel correlation | \(.timings.sentinel_correlation_ms) ms |",
   "| Total verified lifecycle | \(.timings.total_lifecycle_ms) ms |",
   "| Recovery | \(.recovery.result) |",
@@ -32,7 +33,7 @@ jq -r '
   "| OpenAI | \(if .openai.configured then "configured; briefing not invoked by this proof" else "not configured; deterministic proof still valid" end) |",
   "| Sources | \(.correlation.sources | join(" + ")) |",
   "| Provenance | \(.evidence.provenance | join(" + ")) |",
-  "| Seed | \(.evidence.seed) |\n",
+  "| Experiment | \(if .evidence.live_chaos then .evidence.scenario_id else ("seed " + (.evidence.seed | tostring)) end) |\n",
   "## Interpretation\n",
   .interpretation,
   "\n## Judge path\n",

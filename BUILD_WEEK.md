@@ -46,6 +46,18 @@ Work started during the submission period includes:
 | Phase 7 | One-command deterministic Argus, Phoenix, Sentinel, and SOG judge demo | Issue #110 |
 | Phase 8 | Auditable judge evidence scorecard and JSON/Markdown run artifacts | Issue #112 |
 | Phase 9 | Cluster-free full-platform judge demo and explicit live-k3s command | Issue #114 |
+| Phase 10 | Guarded live k3s detection, chaos, recovery, correlation, and measured evidence | Issue #116 |
+| Final video | Two-minute judge story with frame-by-frame screen, action, narration, timing, and fallback plan | Pending |
+
+### Phase 10 — observed live-cluster proof
+
+`make demo-platform-live-dry-run` validates the actual k3s security, chaos, agent, and
+SOG stack without changing it. `make demo-platform-live` then requires two explicit
+human confirmations, creates an isolated two-replica service, waits for observed Argus
+evidence, asks Phoenix to create one real Chaos Mesh PodChaos, continuously measures
+HTTP availability, verifies Kubernetes replacement and full readiness, and publishes
+only the verified cross-agent lifecycle to Sentinel. The resulting JSON/Markdown
+scorecard distinguishes observed/live-chaos provenance from the portable simulator.
 
 ### Phase 9 — portable judge demo
 

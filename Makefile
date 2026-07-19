@@ -129,7 +129,7 @@ demo-platform-local: demo-platform
 demo-platform-live:
 	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
 	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
-	 bash scripts/demo-platform.sh
+	 bash scripts/demo-platform-live-proof.sh
 
 demo-platform-dry-run:
 	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
@@ -140,7 +140,7 @@ demo-platform-dry-run:
 demo-platform-live-dry-run:
 	@PHOENIX_ROOT="$${PHOENIX_ROOT:-$(abspath ../sentinel-stack/phoenix)}" \
 	 SENTINEL_ROOT="$${SENTINEL_ROOT:-$(abspath ../sentinel-stack/sentinel)}" \
-	 DEMO_PLATFORM_DRY_RUN=true bash scripts/demo-platform.sh
+	 LIVE_DEMO_DRY_RUN=true bash scripts/demo-platform-live-proof.sh
 
 demo-cluster:
 	@DEMO_CLUSTER_CONTEXT="$(DEMO_CLUSTER_CONTEXT)" \
@@ -164,6 +164,7 @@ test-ui:
 
 test-platform-demo:
 	@bash scripts/tests/test-demo-platform.sh
+	@bash scripts/tests/test-demo-platform-live.sh
 
 test-cluster-demo:
 	@bash scripts/tests/test-demo-cluster.sh

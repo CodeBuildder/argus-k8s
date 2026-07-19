@@ -6,6 +6,7 @@ phoenix_root="${PHOENIX_ROOT:-$(cd "${argus_root}/../sentinel-stack/phoenix" 2>/
 sentinel_root="${SENTINEL_ROOT:-$(cd "${argus_root}/../sentinel-stack/sentinel" 2>/dev/null && pwd)}"
 dry_run="${DEMO_PLATFORM_DRY_RUN:-false}"
 exit_after_ready="${DEMO_PLATFORM_EXIT_AFTER_READY:-false}"
+skip_seed="${DEMO_PLATFORM_SKIP_SEED:-false}"
 demo_context="${DEMO_PLATFORM_CONTEXT:-$(kubectl config current-context 2>/dev/null || true)}"
 log_dir="$(mktemp -d "${TMPDIR:-/tmp}/sentinel-demo.XXXXXX")"
 artifact_dir="${DEMO_PLATFORM_ARTIFACT_DIR:-${argus_root}/artifacts/demo-platform}"
@@ -159,6 +160,12 @@ start_service "sentinel-ui" 5175 http://127.0.0.1:5175/api/health "${sentinel_ro
   env VITE_ARGUS_URL=http://127.0.0.1:5173 VITE_PHOENIX_URL=http://127.0.0.1:5174 \
   npm --prefix dashboard run dev -- --host 127.0.0.1 --port 5175
 sentinel_ui_ok || fail "Sentinel UI proxy did not return orchestrator JSON from /api/health."
+
+if [[ "${skip_seed}" == "true" ]]; then
+  echo "Live platform services are ready; waiting for the guarded experiment driver."
+  if [[ "${exit_after_ready}" == "true" ]]; then exit 0; fi
+  while true; do sleep 60; done
+fi
 
 run_id="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 correlation_id="judge-demo-${run_id}"
